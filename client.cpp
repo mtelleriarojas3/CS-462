@@ -6,12 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>//added this
-#include <unistd.h>//and this
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <netinet/in.h>
-using namespace std;
 #define SA struct sockaddr
-struct sockaddr_in servaddr, cli;
+struct sockaddr_in servaddr;
 #define PORT     9090
 #define MAXLINE 1024
 
@@ -20,7 +19,10 @@ int callserver();
 
 int main(){
 
-    int sockfd = callserver();
+    //socket connection
+    callserver();
+
+
 
 }
 
@@ -38,12 +40,12 @@ int callserver(){
 
     // assign IP, PORT
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("10.34.40.33");//running phoenix2 for client
-    servaddr.sin_port = htons(PORT);//PORT
+    servaddr.sin_addr.s_addr = inet_addr("10.34.40.33");////running phoenix2 for client
+    servaddr.sin_port = htons(PORT);
+ int n, len;
 
-     int n, len;
-
-    sendto(sockfd, (const char *)hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+    sendto(sockfd, (const char *)hello, strlen(hello),
+        MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
     printf("Hello message sent.\n");
 
@@ -57,3 +59,4 @@ int callserver(){
     return 0;
 
 }
+
