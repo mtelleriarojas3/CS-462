@@ -11,14 +11,18 @@
 #include <netinet/in.h>
 #define SA struct sockaddr
 struct sockaddr_in servaddr;
-#define PORT     9090
+using namespace std;
+#define PORT 9090
+#define IP "10.34.40.33"//phoenix1
 #define MAXLINE 1024
 
-//DECLARING FUNCTIONS
+
 int callserver();
 
-//MAIN FUNCTION
 int main(){
+
+    //INTRO MESSAGE
+    cout<<"\nRUNNING CLIENT ("<< IP <<")\n";
 
     //SOCKET CONNECTION
     callserver();
@@ -28,6 +32,7 @@ int main(){
 }
 
 int callserver(){
+
         int sockfd;
         char buffer[MAXLINE];
         const char *hello = "Hello from client";
@@ -38,12 +43,13 @@ int callserver(){
         printf("socket creation failed...\n");
         exit(0);
     }
-
-    // assign IP, PORT
+    
+    //ASSIGN IP, PORT
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("10.34.40.33");////running phoenix2 for client
+    servaddr.sin_addr.s_addr = inet_addr(IP);
     servaddr.sin_port = htons(PORT);
- int n, len;
+
+     int n, len;
 
     sendto(sockfd, (const char *)hello, strlen(hello),
         MSG_CONFIRM, (const struct sockaddr *) &servaddr,
@@ -59,5 +65,5 @@ int callserver(){
     close(sockfd);
     return 0;
 
-}//END OF METHOD
+}
 
