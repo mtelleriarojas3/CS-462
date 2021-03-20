@@ -9,9 +9,13 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #define PORT 9090
+#define IP "10.34.40.33" //phoenix1
 #define MAXLINE 1024
 #define SA struct sockaddr
 struct sockaddr_in servaddr, cliaddr;
+using namespace std;
+
+
 
 //DECLARING FUNCTIONS
 int setupServerSocket();
@@ -19,6 +23,10 @@ int serverSocketAccept(int sockfd);
 
 //MAIN FUNCTION
 int main(){
+
+
+  //INTRO MESSAGE
+  cout<<"\nRUNNING SERVER ("<< IP <<")\n";
 
   //SOCKET CONNECTION
   int serverSocket = setupServerSocket();
@@ -37,7 +45,7 @@ int setupServerSocket(){
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }else{
-        printf("Socket successfully created..\n");
+ printf("Socket successfully created..\n");
         }
 
     memset(&servaddr, 0, sizeof(servaddr));
@@ -45,7 +53,7 @@ int setupServerSocket(){
 
     // FILLING SERVER INFORMATION
     servaddr.sin_family    = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("10.34.40.33");//PHOENIX1 FOR SERVER
+    servaddr.sin_addr.s_addr = inet_addr(IP);
     servaddr.sin_port = htons(PORT);
 
      // BIND THE SOCKET WITH THE SERVER ADDRESS
@@ -72,22 +80,24 @@ int serverSocketAccept(int sockfd){
 
     len = sizeof(cliaddr);  //len is value/resuslt
 
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE,
-                MSG_WAITALL, ( struct sockaddr *) &cliaddr,
-                (socklen_t*)&len);
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
+
     buffer[n] = '\0';
     printf("Client : %s\n", buffer);
-    sendto(sockfd, (const char *)hello, strlen(hello),
-    connfd = MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+
+    connfd = sendto(sockfd, (const char *)hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+
     if (connfd < 0) {
         printf("server acccept failed...\n");
         exit(0);
-    }else{
-        printf("server acccepted the client... server is listenning\n");
-    }
+    }//else{
+ //       printf("server acccepted the client... server is listenning\n");
+ //   }
     printf("Hello message sent.\n");
 
     return connfd;
-    
+
 }//END OF METHOD
+
+
 
