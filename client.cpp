@@ -14,12 +14,13 @@ struct sockaddr_in servaddr;
 #define PORT     9090
 #define MAXLINE 1024
 
-
+//DECLARING FUNCTIONS
 int callserver();
 
+//MAIN FUNCTION
 int main(){
 
-    //socket connection
+    //SOCKET CONNECTION
     callserver();
 
 
@@ -32,7 +33,7 @@ int callserver(){
         const char *hello = "Hello from client";
 
 
-    // socket create and varification
+    //SOCKET CREATION AND VERIFICATION
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         printf("socket creation failed...\n");
         exit(0);
@@ -58,5 +59,5 @@ int callserver(){
     close(sockfd);
     return 0;
 
-}
+}//END OF METHOD
 
