@@ -8,18 +8,21 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-using namespace std;
-#define PORT     9090
+#define PORT 9090
 #define MAXLINE 1024
-
 #define SA struct sockaddr
 struct sockaddr_in servaddr, cliaddr;
+
+//DECLARING FUNCTIONS
 int setupServerSocket();
 int serverSocketAccept(int sockfd);
 
+//MAIN FUNCTION
 int main(){
+
+  //SOCKET CONNECTION
   int serverSocket = setupServerSocket();
-  int sockfd = serverSocketAccept(serverSocket);
+  serverSocketAccept(serverSocket);
   close(serverSocket);
 
 
@@ -29,7 +32,7 @@ int setupServerSocket(){
 
    int sockfd;
 
-    // Creating socket file descriptor
+    // CREATING SOCKET FILE DESCRIPTOR
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("socket creation failed");
         exit(EXIT_FAILURE);
@@ -40,11 +43,12 @@ int setupServerSocket(){
     memset(&servaddr, 0, sizeof(servaddr));
     memset(&cliaddr, 0, sizeof(cliaddr));
 
-    // Filling server information
-    servaddr.sin_family    = AF_INET; // IPv4
-    servaddr.sin_addr.s_addr = inet_addr("10.34.40.33");//INADDR_ANY;
+    // FILLING SERVER INFORMATION
+    servaddr.sin_family    = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr("10.34.40.33");//PHOENIX1 FOR SERVER
     servaddr.sin_port = htons(PORT);
-         // Bind the socket with the server address
+
+     // BIND THE SOCKET WITH THE SERVER ADDRESS
     if ( bind(sockfd, (const struct sockaddr *)&servaddr,
             sizeof(servaddr)) < 0 )
     {
@@ -57,7 +61,7 @@ int setupServerSocket(){
 return sockfd;
 
 
-}//end
+}//END OF METHOD
 
 
 
@@ -84,4 +88,6 @@ int serverSocketAccept(int sockfd){
     printf("Hello message sent.\n");
 
     return connfd;
-}//end
+    
+}//END OF METHOD
+
