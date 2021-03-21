@@ -9,13 +9,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #define PORT 9090
-#define IP "10.34.40.33" //phoenix1
+#define IP "10.34.40.33" //phoenix1 ip address
 #define MAXLINE 1024
 #define SA struct sockaddr
 struct sockaddr_in servaddr, cliaddr;
 using namespace std;
-
-
 
 //DECLARING FUNCTIONS
 int setupServerSocket();
@@ -26,7 +24,7 @@ int main(){
 
 
   //INTRO MESSAGE
-  cout<<"\nRUNNING SERVER ("<< IP <<")\n";
+  cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
 
   //SOCKET CONNECTION
   int serverSocket = setupServerSocket();
@@ -45,8 +43,8 @@ int setupServerSocket(){
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }else{
- printf("Socket successfully created..\n");
-        }
+         //cout<<"Socket successfully created..\n";
+    }
 
     memset(&servaddr, 0, sizeof(servaddr));
     memset(&cliaddr, 0, sizeof(cliaddr));
@@ -62,9 +60,10 @@ int setupServerSocket(){
     {
         perror("bind failed");
         exit(EXIT_FAILURE);
-    }else{
-        printf("Socket successfully binded..\n");
-    }
+    }//else{
+     //   printf("Socket successfully binded..\n");
+    //}
+    cout<<"No clients connected at the moment...\n";
 
 return sockfd;
 
@@ -82,22 +81,22 @@ int serverSocketAccept(int sockfd){
 
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
 
-    buffer[n] = '\0';
-    printf("Client : %s\n", buffer);
-
     connfd = sendto(sockfd, (const char *)hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
 
     if (connfd < 0) {
         printf("server acccept failed...\n");
         exit(0);
-    }//else{
- //       printf("server acccepted the client... server is listenning\n");
- //   }
-    printf("Hello message sent.\n");
+    }else{
+        cout<<"Client Connected: ("<<inet_ntoa(cliaddr.sin_addr)<<")\n\n";
+    }
+
+   buffer[n] = '\0';
+    printf("Client : %s\n\n", buffer);
+
+    printf("Hello message sent.\n\n");
 
     return connfd;
 
 }//END OF METHOD
-
 
 
