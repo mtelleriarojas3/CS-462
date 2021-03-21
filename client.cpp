@@ -13,7 +13,7 @@
 struct sockaddr_in servaddr;
 using namespace std;
 #define PORT 9090
-#define IP "10.34.40.33"//phoenix1 ip address
+#define IP "10.34.40.33"//PHOENIX1 IP ADDRESS
 #define MAXLINE 1024
 
 
@@ -25,11 +25,14 @@ int main(){
     cout<<"\nRUNNING CLIENT\n";
 
     //SOCKET CONNECTION
-    callserver();
+   int clientSocket =  callserver();
 
 
 
-}
+
+   close(clientSocket);//CLOSE CONNECTION
+
+}//END OF MAIN
 
 int callserver(){
 
@@ -54,19 +57,15 @@ int callserver(){
      int n, len;
 
     sendto(sockfd, (const char *)hello, strlen(hello),
-        MSG_CONFIRM, (const struct sockaddr *) &servaddr,
-            sizeof(servaddr));
+    MSG_CONFIRM, (const struct sockaddr *) &servaddr,sizeof(servaddr));
 
     cout<<"Hello message sent.\n\n";
 
     n = recvfrom(sockfd, (char *)buffer, MAXLINE,
-                MSG_WAITALL, (struct sockaddr *) &servaddr,
-                (socklen_t*)&len);
+    MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
     buffer[n] = '\0';
     cout<<"Server : "<<buffer <<"\n\n";
 
+    return sockfd;
 
-    close(sockfd);
-    return 0;
-
-}
+}//END OF FUNCTION
