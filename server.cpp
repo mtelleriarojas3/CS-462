@@ -8,10 +8,15 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+
+//DECLARING GLOBAL VARIABLES
+#define FRAMESIZE 1500
+#define MAXTIMEOUT 1000    //MAX TIMEOUT
 #define PORT 9090
 #define IP "10.34.40.33" //phoenix1 ip address
 #define MAXLINE 1024
 #define SA struct sockaddr
+int sockfd, timeOut, len;
 struct sockaddr_in servaddr, cliaddr;
 using namespace std;
 
@@ -22,6 +27,7 @@ int serverSocketAccept(int sockfd);
 //MAIN FUNCTION
 int main(){
 
+  int timeAns; //what the user decides for timeout interval question
 
   //INTRO MESSAGE
   cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
@@ -32,11 +38,39 @@ int main(){
   close(serverSocket);
 
 
-}
+
+  //PROMPTING USER FOR TIMEOUT INTERVAL
+    cout<<"\nDo you wish to set a timeout, or use a ping-calculated timeout?\n\n";
+    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n";
+
+    while (scanf("%i", &timeAns) != 1 && ((timeAns != 1) && (timeAns != 2))) {
+        getchar();
+    }
+
+    if(timeAns == 1){//IF THE USER WANTS TO SET A TIMEOUT
+
+            cout<<"\nInput a timeout value (In Microseconds): ";
+            while (scanf("%i", &timeAns) && ((timeAns <= 0) || (timeAns > MAXTIMEOUT))) {
+            getchar();
+
+            }
+
+    } else if(timeAns == 2){
+           //timeAns = calculateCustomTimeout(td);
+        printf("\nCalculated timeout using given packet size of %d bytes is: %d microseconds\n", FRAMESIZE, timeAns);
+    }
+
+
+    //ASSIGN TIMEOUT
+    timeOut = timeAns;
+
+close(serverSocket);//CLOSE CONNECTION
+
+}//END OF MAIN
 
 int setupServerSocket(){
 
-   int sockfd;
+
 
     // CREATING SOCKET FILE DESCRIPTOR
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -75,7 +109,7 @@ return sockfd;
 int serverSocketAccept(int sockfd){
     char buffer[MAXLINE];
     const char *hello = "Hello from server";
-    int len, n, connfd;
+    int n, connfd;
 
     len = sizeof(cliaddr);  //len is value/resuslt
 
@@ -98,5 +132,3 @@ int serverSocketAccept(int sockfd){
     return connfd;
 
 }//END OF METHOD
-
-
