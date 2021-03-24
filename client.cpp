@@ -10,99 +10,154 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #define SA struct sockaddr 
+typedef unsigned long uint64;
 struct sockaddr_in servaddr;
 using namespace std;
 #define PORT 9090 
 #define IP "10.34.40.33"//PHOENIX1 IP ADDRESS
 #define MAXLINE 1024
+int n, len;
 
-
-int callserver();
 int clientFunction();
+int callserver();
+FILE *file_Name();
+long file_Size (FILE *fp);
 
+int callserver(){
+
+	 int sockfd;
+   /////////
+     char buffer[MAXLINE];
+     const char *ConnConfirm = "Client Connected...";
+   //////////
+   
+    //SOCKET CREATION AND VERIFICATION  
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+        perror("socket creation failed..."); 
+        exit(EXIT_FAILURE);
+    }else{
+	   cout<<"Connecting to the client...\n";
+    } 
+  
+    memset(&servaddr, 0, sizeof(servaddr));
+    
+    //ASSIGN IP, PORT 
+    servaddr.sin_family = AF_INET; 
+    servaddr.sin_port = htons(PORT);
+    servaddr.sin_addr.s_addr = inet_addr(IP);
+    
+    // connect the client socket to server socket 
+    if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
+        printf("connection with the server failed...\n"); 
+        exit(0); 
+    }
+    
+    /////////
+        sendto(sockfd, (const char *)ConnConfirm, strlen(ConnConfirm),
+        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+            sizeof(servaddr));
+    
+          
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
+                MSG_WAITALL, (struct sockaddr *) &servaddr,
+                (socklen_t*)&len);
+    buffer[n] = '\0';
+    cout<<buffer;
+    memset(buffer, 0, sizeof(buffer));
+    //////////////
+    
+    return sockfd;
+    
+
+}//END OF FUNCTION
+
+int clientFunction(){
+     
+  int protocolChoice; //GBN OR SR?
+  int timeoutChoice; //what the user decides for timeout interval question
+  int packetSize; 
+  int slidingWindowSize; 
+  int errorsChoice;
+  uint64 fileSize;  
+  FILE *file;
+  //connect to server
+  int sockfd = callserver();
+      
+    //THIS IS WHERE WE PROMPT THE USER FOR INPUT IN CASE HE WANTS TO ENTER HIS OWN VALUES.
+    cout << "Type of protocol:\n1)GBN\n2)SR\n-";
+    cin >> protocolChoice;
+    
+
+    cout << "\nPacket size: ";
+    cin >> packetSize;
+    
+    cout<<"\nDo you wish to set a timeout, or use a ping-calculated timeout?\n";
+    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n-";
+    cin >> timeoutChoice;
+    
+    cout<<"\nEnter Sliding Window Size: ";
+    cin >> slidingWindowSize;
+    
+    //range of sequence numbers
+
+    cout << "\nSituational errors:\n1)drop packets\n2)lose acks\n-";
+    cin >> errorsChoice;
+
+    cout<<"\n";
+
+    //HERE WE PROMPT THE USER FOR A FILE NAME AND WE GET THE FILE SIZE
+    file = file_Name();
+    fileSize = file_Size(file);
+    
+//memset(buff, 0, sizeof(buff));
+ return sockfd;
+}
+
+// Get file name and open file
+FILE *file_Name() {
+    const char *method = "rb";
+    char fileName[MAXLINE]; 
+    
+    FILE *fp = NULL;
+    while (!strlen(fileName) || !fp) {
+        cout<<"Enter a file name: ";
+         cin >> fileName;
+           
+        fp = fopen(fileName, method);
+    }
+    return fp;
+}
+
+long file_Size (FILE *fp) {
+    // Need size of file for dynamic memory allocation
+    if (fseek(fp, 0, SEEK_END)) {
+        printf("Error: Unable to find end of file\n");
+        exit(1);
+    }
+    long size = ftell(fp);
+    printf("File size: %li (bytes)\n", size);
+    // Back to beginning of file;
+    fseek(fp, 0L, SEEK_SET);
+    return size;
+}
+
+
+
+
+//MAIN FUNCTION
 int main(){
 
     //INTRO MESSAGE
     cout<<"\nRUNNING CLIENT\n";
 
     //SOCKET CONNECTION
-   int clientSocket =  clientFunction();
+  int clientSocket = clientFunction();//Set up client Socket
+  
+  
        	
-
    close(clientSocket);//CLOSE CONNECTION
 
 }//END OF MAIN
 
-int callserver(){
-
-	int sockfd;
-
-    //SOCKET CREATION AND VERIFICATION  
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
-        cout<<"socket creation failed...\n"; 
-        exit(0); 
-    }else{
-	cout<<"Connected to server successfully!\n\n";
-    } 
-  
-    //ASSIGN IP, PORT 
-    servaddr.sin_family = AF_INET; 
-    servaddr.sin_addr.s_addr = inet_addr(IP);
-    servaddr.sin_port = htons(PORT);
-  
-    // int n, len;
-
-    //sendto(sockfd, (const char *)hello, strlen(hello),
-    //MSG_CONFIRM, (const struct sockaddr *) &servaddr,sizeof(servaddr));
-
-    //cout<<"Hello message sent.\n\n";
-
-    //n = recvfrom(sockfd, (char *)buffer, MAXLINE,
-    //MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
-    //buffer[n] = '\0';
-   // cout<<"Server : "<<buffer <<"\n\n";
-    
-    return sockfd;
-
-}//END OF FUNCTION
 
 
-//I STILL DON'T KNOW WHAT I WILL DO WITH THIS
-int clientFunction(){
-
-	int sockfd = callserver();
-
-	char buff[MAXLINE];
-        int n;
-	int len;
-
-        for (;;) {
-        
-        printf("Enter the string : ");
-        n = 0;
-        while ((buff[n++] = getchar()) != '\n')
-            ;
-       
-       //SEND DATA TO THE SERVER	
-       sendto(sockfd, (const char *)buff, strlen(buff),
-       MSG_CONFIRM, (const struct sockaddr *) &servaddr,sizeof(servaddr));
-       
-       memset(buff, 0, sizeof(buff));
-        
-       //DATA RECEIVED FROM THE SERVER	
-       n = recvfrom(sockfd, (char *)buff, MAXLINE,
-       MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
-       buff[n] = '\0';
-       cout<<"Server : "<<buff<<"\n\n";
-
-
-        printf("From Server : %s", buff);
-        if ((strncmp(buff, "exit", 4)) == 0) {
-            printf("Client Exit...\n");
-            break;
-        }
-    }
-
-
-return sockfd;
-}

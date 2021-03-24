@@ -10,72 +10,27 @@
 #include <unistd.h>
 
 //DECLARING GLOBAL VARIABLES
-#define FRAMESIZE 1500
+#define FRAMESIZE 1500    //FRAME SIZE
 #define MAXTIMEOUT 1000    //MAX TIMEOUT
 #define PORT 9090
 #define IP "10.34.40.33" //phoenix1 ip address
 #define MAXLINE 1024 
 #define SA struct sockaddr
-int sockfd, timeOut, len; 
+
+int sockfd, timeOut, len, n;; 
 struct sockaddr_in servaddr, cliaddr;
 using namespace std;
 
-//DECLARING FUNCTIONS
 int setupServerSocket();
-void serverSocketAccept(int sockfd);
+void userPrompt(int sockfd);
 
-
-int serverFunction(int sockfd);////
-
-
-//MAIN FUNCTION
-int main(){
-
-  int timeAns; //what the user decides for timeout interval question
-
-  //INTRO MESSAGE	
-  cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
-
-  //SOCKET CONNECTION	
-  int serverSocket = setupServerSocket();
-  serverFunction(serverSocket);
-  //close(serverSocket); 
-  
-
-
-  //PROMPTING USER FOR TIMEOUT INTERVAL
-    cout<<"\nDo you wish to set a timeout, or use a ping-calculated timeout?\n\n";
-    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n";
-    
-    while (scanf("%i", &timeAns) != 1 && ((timeAns != 1) && (timeAns != 2))) {
-        getchar();
-    }
-  
-    if(timeAns == 1){//IF THE USER WANTS TO SET A TIMEOUT
-	   
-	    cout<<"\nInput a timeout value (In Microseconds): ";
-	    while (scanf("%i", &timeAns) && ((timeAns <= 0) || (timeAns > MAXTIMEOUT))) {
-            getchar(); 
-
-	    }
-
-    } else if(timeAns == 2){
-	   //timeAns = calculateCustomTimeout(td);
-        printf("\nCalculated timeout using given packet size of %d bytes is: %d microseconds\n", FRAMESIZE, timeAns);
-    }
-
-
-    //ASSIGN TIMEOUT
-    timeOut = timeAns;
-
-close(serverSocket);//CLOSE CONNECTION
-
-}//END OF MAIN
+///////////////////////////////////////////////////////////////////////////////////////////////
 
 int setupServerSocket(){
-   
-  
-
+    char buffer[MAXLINE];
+    const char *ConnConfirm = "Connected to server successfully!\n";
+    int opt = 1;
+    
     // CREATING SOCKET FILE DESCRIPTOR 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("socket creation failed");
@@ -88,73 +43,127 @@ int setupServerSocket(){
     memset(&cliaddr, 0, sizeof(cliaddr));
 
     // FILLING SERVER INFORMATION
-    servaddr.sin_family    = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(IP);
+    servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(PORT);
+    servaddr.sin_addr.s_addr = inet_addr(IP);
+
 
      // BIND THE SOCKET WITH THE SERVER ADDRESS
-    if ( bind(sockfd, (const struct sockaddr *)&servaddr,
-            sizeof(servaddr)) < 0 )
-    {
+    if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
-    }//else{
-     //   printf("Socket successfully binded..\n");
-    //}
+    }
+    
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    
     cout<<"No clients connected at the moment...\n";
+    
+    
+    
+    len = sizeof(cliaddr);  //len is value/resuslt 
 
-return sockfd;
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
+                MSG_WAITALL, ( struct sockaddr *) &cliaddr,
+                (socklen_t*)&len);
+    buffer[n] = '\0';
+    cout<<buffer;
+    
+    
+    sendto(sockfd, (const char *)ConnConfirm, strlen(ConnConfirm), 
+        MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
+            len);
+    
+    
+    
+    
+
+    return sockfd;
 
 
 }//END OF METHOD
 
 
-int serverFunction(int sockfd){
-	
 
+//THIS IS THE "MENU" FOR THE USER
+void userPrompt(int sockfd) {
 
-	char buff[MAXLINE]; 
-        int n;
-       	int len = sizeof(cliaddr);
+  //DECLARING VARIABLES 
+ // const char *prompts;
+  int protocolChoice; //GBN OR SR?
+  int timeAns; //what the user decides for timeout interval question
+  int packetSize; 
+  int slidingWindowSize; 
 
-		
-        
-	// infinite loop for chat 
-        for (;;) { 
- 	 
-        // read the message from client and copy it in buffer 
-        //read(sockfd, buff, sizeof(buff));
-	n = recvfrom(sockfd, (char *)buff, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
-
-	
-        // print buffer which contains the client contents 
-        printf("From client: %s\t To client : ", buff); 
-        
-	memset(buff, 0, sizeof(buff)); 
-        n = 0; 
-        // copy server message in the buffer 
-        while ((buff[n++] = getchar()) != '\n') 
-            ; 
   
-        // and send that buffer to client 
-        
-  	sendto(sockfd, (const char *)buff, strlen(buff), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-	 
-	buff[n] = '\0';
-        printf("Client : %s\n\n", buff);
-
-        // if msg contains "Exit" then server exit and chat ended. 
-        if (strncmp("exit", buff, 4) == 0) { 
-            printf("Server Exit...\n"); 
-            break; 
-        } 
+  while (scanf("%i", &protocolChoice) != 1 && ((protocolChoice != 1) && (protocolChoice != 2))) {
+        getchar();
     }
-	return sockfd;
+  
+   //PROMPTING USER FOR SIZE OF PACKET
+   cout<<"\nEnter Packet Size: ";
+   scanf("%i", &packetSize);
+   
+  
+  //PROMPTING USER FOR TIMEOUT INTERVAL OR PING CALCULATED
+    cout<<"\nDo you wish to set a timeout, or use a ping-calculated timeout?\n\n";
+    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n";
+    
+    while (scanf("%i", &timeAns) != 1 && ((timeAns != 1) && (timeAns != 2))) {
+        getchar();
+    }
+  
+    if(timeAns == 1){//if the user wants to set a timeout
+	   
+	    cout<<"\nInput a timeout value (In Microseconds): ";
+	    while (scanf("%i", &timeAns) && ((timeAns <= 0) || (timeAns > MAXTIMEOUT))) {
+            getchar(); 
+
+	    }
+
+    } else if(timeAns == 2){
+	   //timeAns = calculateCustomTimeout(td);
+        printf("\nCalculated timeout using given packet size of %d bytes is: %d microseconds\n", FRAMESIZE, timeAns);
+    }
+    
+    //assing timeout
+    timeOut = timeAns;
+    
+    //PROMPTING USER FOR SIZE OF SLIDING WINDOW
+    cout<<"\nEnter Sliding Window Size: ";
+    scanf("%i", &slidingWindowSize);
+    
+    //PROMPTING USER FOR RANGE OF SEQUENCE NUMBERS
+    //no idea what to do here yet
+    
+    //PROMPTING USER FOR SITUATIONAL ERRORS 
+    //(none, randomly generated, user specified i.e., drop packets 2 4 5, lose acks 11, etc
+    
+    
+
 }
 
 
 
+//MAIN FUNCTION
+int main(){
 
+  //INTRO MESSAGE	
+  cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
+
+  //SOCKET CONNECTION	
+  int serverSocket = setupServerSocket();
+  userPrompt(serverSocket);
+  
+  //serverFunction(serverSocket);
+  //close(serverSocket); 
+  
+
+close(serverSocket);//CLOSE CONNECTION
+
+}//END OF MAIN
 
 //ideas: gotta make two different methods for server socket, one to send and another to receive, that way the client won't disconnect, look at ref.
 
