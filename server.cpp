@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <netinet/in.h>
 
 //DECLARING GLOBAL VARIABLES
 #define FRAMESIZE 1500    //FRAME SIZE
@@ -16,17 +17,19 @@
 #define IP "10.34.40.33" //phoenix1 ip address
 #define MAXLINE 1024 
 #define SA struct sockaddr
-
-int sockfd, timeOut, len, n;; 
+int n, len;
 struct sockaddr_in servaddr, cliaddr;
 using namespace std;
 
 int setupServerSocket();
-void userPrompt(int sockfd);
-
+int receivePackets();
+int fix(int sockfd, unsigned char *file, int packetSize);
+void printMD5(const char *fileName);
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 int setupServerSocket(){
+
+    int sockfd;
     char buffer[MAXLINE];
     const char *ConnConfirm = "Connected to server successfully!\n";
     int opt = 1;
@@ -61,25 +64,21 @@ int setupServerSocket(){
     
     cout<<"No clients connected at the moment...\n";
     
-    
-    
     len = sizeof(cliaddr);  //len is value/resuslt 
 
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
+        n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
                 MSG_WAITALL, ( struct sockaddr *) &cliaddr,
                 (socklen_t*)&len);
     buffer[n] = '\0';
-    cout<<buffer;
+    printf("%s\n", buffer);
     
     
     sendto(sockfd, (const char *)ConnConfirm, strlen(ConnConfirm), 
         MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
             len);
-    
-    
-    
-    
 
+    memset(buffer, 0, sizeof(buffer));
+    
     return sockfd;
 
 
@@ -87,64 +86,110 @@ int setupServerSocket(){
 
 
 
-//THIS IS THE "MENU" FOR THE USER
-void userPrompt(int sockfd) {
+int receivePackets(){
 
-  //DECLARING VARIABLES 
- // const char *prompts;
-  int protocolChoice; //GBN OR SR?
-  int timeAns; //what the user decides for timeout interval question
-  int packetSize; 
-  int slidingWindowSize; 
 
+int packetSize;
+int totalFileSize;
+uint32_t totalSizeTemp;
+uint32_t tempPacketSize;
+const char *outputFileName = "sample.out";
+int packet = 0; 
+printf("HERE WE ARE\n");
+  int sockfd = setupServerSocket();
+
+  printf("HERE WE ARE AGAIN\n");
   
-  while (scanf("%i", &protocolChoice) != 1 && ((protocolChoice != 1) && (protocolChoice != 2))) {
-        getchar();
-    }
+	//grab the total size of the file
+  recvfrom(sockfd, &totalSizeTemp, sizeof(totalSizeTemp), 
+                MSG_WAITALL, ( struct sockaddr *) &cliaddr,
+                (socklen_t*)&len);
+  totalFileSize = ntohl(totalSizeTemp);
+  cout<<"TOTAL SIZE: "<<totalFileSize<<"\n"; 
   
-   //PROMPTING USER FOR SIZE OF PACKET
-   cout<<"\nEnter Packet Size: ";
-   scanf("%i", &packetSize);
-   
+	//grab size of the packet that will be sent here
+ 
+  recvfrom(sockfd, &tempPacketSize, sizeof(tempPacketSize), 
+                MSG_WAITALL, ( struct sockaddr *) &cliaddr,
+               (socklen_t*)&len);
+  packetSize = ntohl(tempPacketSize);
+	cout<<"PACKET SIZE: "<<packetSize<<"\n"; 
+
+
+  unsigned char *file;
+	file = (unsigned char*)calloc(packetSize, sizeof(unsigned char));
+	//bzero(file, packetSize);
+
+	ofstream fileReceived; 
+	fileReceived.open(outputFileName, ios::out | ios::trunc);
+	
+
+		while((fix(sockfd, file, packetSize)) > 0){
+
+		cout<<"Rec packet# " <<dec << packet<<"\n";
+
+
+    if(totalFileSize - packetSize < 0){
+		
+		packetSize = totalFileSize;
+		fileReceived.write((char*)(file), packetSize);
+
+		}else{
   
-  //PROMPTING USER FOR TIMEOUT INTERVAL OR PING CALCULATED
-    cout<<"\nDo you wish to set a timeout, or use a ping-calculated timeout?\n\n";
-    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n";
-    
-    while (scanf("%i", &timeAns) != 1 && ((timeAns != 1) && (timeAns != 2))) {
-        getchar();
-    }
+			fileReceived.write((char*)(file), packetSize);
+
+		}
+
+		totalFileSize -= packetSize;
+
+	
+		packet++;
+		bzero(file, packetSize);
+		
+
+    }//end of while
+
+  cout<<"\n\nReceive Success!\n";
+	
+	fileReceived.close();
+
+  printMD5(outputFileName); 
+
+return sockfd;
+
+}//END OF METHOD
+
+int fix(int sockfd, unsigned char *file, int packetSize){
+
+int last_size_read = recvfrom(sockfd, file, sizeof(char), 
+                MSG_WAITALL, ( struct sockaddr *) &cliaddr,
+                (socklen_t*)&len);
+
+int sum_read = last_size_read;
+
+if(sum_read > 0){
+        while(sum_read < packetSize && last_size_read != 0){
+                (last_size_read = recvfrom(sockfd, (file+sum_read), (sizeof(char)*packetSize)-(sizeof(char)*sum_read), MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len));
+                sum_read += last_size_read;
+        }
+}
   
-    if(timeAns == 1){//if the user wants to set a timeout
-	   
-	    cout<<"\nInput a timeout value (In Microseconds): ";
-	    while (scanf("%i", &timeAns) && ((timeAns <= 0) || (timeAns > MAXTIMEOUT))) {
-            getchar(); 
-
-	    }
-
-    } else if(timeAns == 2){
-	   //timeAns = calculateCustomTimeout(td);
-        printf("\nCalculated timeout using given packet size of %d bytes is: %d microseconds\n", FRAMESIZE, timeAns);
-    }
-    
-    //assing timeout
-    timeOut = timeAns;
-    
-    //PROMPTING USER FOR SIZE OF SLIDING WINDOW
-    cout<<"\nEnter Sliding Window Size: ";
-    scanf("%i", &slidingWindowSize);
-    
-    //PROMPTING USER FOR RANGE OF SEQUENCE NUMBERS
-    //no idea what to do here yet
-    
-    //PROMPTING USER FOR SITUATIONAL ERRORS 
-    //(none, randomly generated, user specified i.e., drop packets 2 4 5, lose acks 11, etc
-    
-    
-
+return sum_read;
 }
 
+
+
+
+void printMD5(const char *fileName) {
+	string filetbs = fileName;
+	string md5file = "md5sum "+filetbs;
+	const char *actualmd5 = md5file.c_str();
+	
+	cout<<"\nMD5:\n";
+
+	system(actualmd5);
+	cout<<"\n";
+}
 
 
 //MAIN FUNCTION
@@ -154,16 +199,10 @@ int main(){
   cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
 
   //SOCKET CONNECTION	
-  int serverSocket = setupServerSocket();
-  userPrompt(serverSocket);
+  int serverSocket = receivePackets();
   
-  //serverFunction(serverSocket);
-  //close(serverSocket); 
-  
-
 close(serverSocket);//CLOSE CONNECTION
 
 }//END OF MAIN
 
-//ideas: gotta make two different methods for server socket, one to send and another to receive, that way the client won't disconnect, look at ref.
 

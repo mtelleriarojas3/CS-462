@@ -9,8 +9,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <iomanip>
+#include <bits/stdc++.h>
+
 #define SA struct sockaddr 
-typedef unsigned long uint64;
 struct sockaddr_in servaddr;
 using namespace std;
 #define PORT 9090 
@@ -20,8 +22,10 @@ int n, len;
 
 int clientFunction();
 int callserver();
-FILE *file_Name();
-long file_Size (FILE *fp);
+FILE *get_file(char *fileName);
+int get_file_Size (FILE *fp);
+void sendPackets(int sockfd, FILE *infile, int packetSize, int size);
+void printMD5(char *fileName);
 
 int callserver(){
 
@@ -78,21 +82,25 @@ int clientFunction(){
   int packetSize; 
   int slidingWindowSize; 
   int errorsChoice;
-  uint64 fileSize;  
-  FILE *file;
+  int fileSize;  
+  FILE *infile;
+  char fileName[MAXLINE];
+  
+  
   //connect to server
   int sockfd = callserver();
       
     //THIS IS WHERE WE PROMPT THE USER FOR INPUT IN CASE HE WANTS TO ENTER HIS OWN VALUES.
-    cout << "Type of protocol:\n1)GBN\n2)SR\n-";
-    cin >> protocolChoice;
-    
+    cout << "Type of protocol:\n1)GBN\n2)SR\n-> ";
+    cin >> protocolChoice; 
 
     cout << "\nPacket size: ";
     cin >> packetSize;
     
+    //packetSize *= 1000; //conver to KB
+    
     cout<<"\nDo you wish to set a timeout, or use a ping-calculated timeout?\n";
-    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n-";
+    cout<<"1)Set a timeout\n2)Ping-calculated timeout\n-> ";
     cin >> timeoutChoice;
     
     cout<<"\nEnter Sliding Window Size: ";
@@ -100,49 +108,108 @@ int clientFunction(){
     
     //range of sequence numbers
 
-    cout << "\nSituational errors:\n1)drop packets\n2)lose acks\n-";
+    cout << "\nSituational errors:\n1)drop packets\n2)lose acks\n-> ";
     cin >> errorsChoice;
+
+    cout<<"\nEnter a file name: ";
+    cin >> fileName;
 
     cout<<"\n";
 
     //HERE WE PROMPT THE USER FOR A FILE NAME AND WE GET THE FILE SIZE
-    file = file_Name();
-    fileSize = file_Size(file);
+    infile = get_file(fileName);//get filename and open file
+    fileSize = get_file_Size(infile);
+    sendPackets(sockfd, infile, packetSize, fileSize);
+    	
+    fclose(infile);
+    printMD5(fileName); 
     
-//memset(buff, 0, sizeof(buff));
+
  return sockfd;
 }
 
-// Get file name and open file
-FILE *file_Name() {
-    const char *method = "rb";
-    char fileName[MAXLINE]; 
+
+void sendPackets(int sockfd, FILE *infile, int packetSize, int size){
+
+unsigned char *fileBuff;
     
+    //grab sufficient memory for the buffer to hold the text
+    fileBuff = (unsigned char*)calloc(packetSize, sizeof(unsigned char));
+    //bzero(fileBuff, sizeof(fileBuff));
+    
+    //send total file size to server
+    uint32_t totalSizeTemp = htonl(size);//
+    sendto(sockfd, &totalSizeTemp, sizeof(totalSizeTemp),
+        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+            sizeof(servaddr));
+     
+     
+	  //send packet size to server
+    uint32_t tempPacketSize = htonl(packetSize);// 
+    sendto(sockfd, &tempPacketSize, sizeof(tempPacketSize),
+        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+            sizeof(servaddr));
+    //cout<<"\nTemp packet size sent: "<< packetSize <<"\n";
+
+    int packet = 0;
+    
+ 	  //copy all the text into the buffer
+	  while(fread(fileBuff, sizeof(char), packetSize, infile)){
+    cout<<"Sent packet# " <<dec << packet<<"\n";
+    
+    packet++;
+
+    //write(sockfd, fileBuff, packetSize);
+    sendto(sockfd, (unsigned char *)fileBuff, sizeof(packetSize),
+        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+            sizeof(servaddr));
+     bzero(fileBuff, packetSize);        
+     
+   }//end while
+   //fclose(infile);
+   
+
+
+}//END OF METHOD
+
+
+
+// Get file name and open file
+FILE *get_file(char *fileName) {
+    const char *method = "rb";
+
     FILE *fp = NULL;
-    while (!strlen(fileName) || !fp) {
-        cout<<"Enter a file name: ";
-         cin >> fileName;
-           
+    while (!strlen(fileName) || !fp) {        
         fp = fopen(fileName, method);
     }
     return fp;
 }
 
-long file_Size (FILE *fp) {
+int get_file_Size (FILE *fp) {
     // Need size of file for dynamic memory allocation
     if (fseek(fp, 0, SEEK_END)) {
         printf("Error: Unable to find end of file\n");
         exit(1);
     }
-    long size = ftell(fp);
-    printf("File size: %li (bytes)\n", size);
+    int size = ftell(fp);
+    //printf("File size: %li (bytes)\n", size);
     // Back to beginning of file;
-    fseek(fp, 0L, SEEK_SET);
+    fseek(fp, 0, SEEK_SET);
     return size;
 }
 
+//PRINT MD5
+void printMD5(char *fileName){
+  
+	string filetbs = fileName;
+	string md5file = "md5sum "+filetbs;
+	const char *actualmd5 = md5file.c_str();
+	
+	cout<<"\nMD5:\n";
 
-
+	system(actualmd5);
+	cout<<"\n";
+}
 
 //MAIN FUNCTION
 int main(){
