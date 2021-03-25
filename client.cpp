@@ -11,7 +11,6 @@
 #include <netinet/in.h>
 #include <iomanip>
 #include <bits/stdc++.h>
-
 #define SA struct sockaddr 
 struct sockaddr_in servaddr;
 using namespace std;
