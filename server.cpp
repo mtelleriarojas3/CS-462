@@ -1,31 +1,11 @@
-#include <netdb.h> 
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <sys/types.h>
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <netinet/in.h>
-
-//DECLARING GLOBAL VARIABLES
-#define FRAMESIZE 1500    //FRAME SIZE
-#define MAXTIMEOUT 1000    //MAX TIMEOUT
-#define PORT 9090
-#define IP "10.34.40.33" //phoenix1 ip address
-#define MAXLINE 1024 
+#include "includes.h"
 #define SA struct sockaddr
 int n, len;
 struct sockaddr_in servaddr, cliaddr;
-using namespace std;
 
 // Define functions
 int setupServerSocket();
 int receivePackets();
-int fix(int sockfd, unsigned char *file, int packetSize);
-void printMD5(const char *fileName);
 void goBackN();
 void selectiveRepeat();
 void stopAndWait();
@@ -97,15 +77,21 @@ int receivePackets(){
     printf("\n");
   
     //grab protocol type from client
-    recvfrom(sockfd, &tempProtocolType, sizeof(tempProtocolType), MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
-    protocolType = ntohl(tempProtocolType);
-	  //cout<<"Protocol Type: "<<protocolType<<"\n"; 
+    recvfrom(sockfd, &protocolType, sizeof(protocolType), MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
+    
+ 
     if(protocolType == 1) {
+    
         goBackN();
+        
     } else if(protocolType == 2) {
+    
         selectiveRepeat();
+        
     } else if(protocolType == 3) {
+    
         stopAndWait();
+        
     }
   
 	  //grab the total size of the file
@@ -135,16 +121,6 @@ void stopAndWait() {
 
 
 
-// This function prints the MD5 of the file
-void printMD5(const char *fileName) {
-	  string filetbs = fileName;
-	  string md5file = "md5sum "+filetbs;
-	  const char *actualmd5 = md5file.c_str();
-	  cout<<"\nMD5:\n";
-	  system(actualmd5);
-	  cout<<"\n";
-}
-
 //MAIN FUNCTION
 int main(){
   //INTRO MESSAGE	
@@ -153,5 +129,3 @@ int main(){
   int serverSocket = receivePackets();
   close(serverSocket);//CLOSE CONNECTION
 }//END OF MAIN
-
-
