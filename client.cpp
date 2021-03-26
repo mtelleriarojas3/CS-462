@@ -1,33 +1,11 @@
-#include <netdb.h> 
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <sys/types.h>
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <iomanip>
-#include <bits/stdc++.h>
-
-// DECLARING GLOBAL VARIABLES
+#include "includes.h"
 #define SA struct sockaddr 
 struct sockaddr_in servaddr;
-using namespace std;
-#define PORT 9090 //Port NUM
-#define IP "10.34.40.33"//PHOENIX1 IP ADDRESS
-#define MAXLINE 1024
 int n, len;
 
 // Define functions
 int clientFunction();
 int callserver();
-FILE *get_file(char *fileName);
-int get_file_Size (FILE *fp);
-void sendPackets(int sockfd, FILE *infile, int packetSize, int size);
-void printMD5(char *fileName);
 void goBackN();
 void selectiveRepeat();
 void stopAndWait();
@@ -118,25 +96,8 @@ int clientFunction(){
     infile = get_file(fileName);//get filename and open file
     fileSize = get_file_Size(infile);
     
-    // Call correct protocol and send it to the server so server knows which protocol to use
-    if(protocolChoice == 1) {
-        //send protocol type to server
-        uint32_t protocolTypeToSend = htonl(protocolChoice);
-        sendto(sockfd, &protocolTypeToSend, sizeof(protocolTypeToSend),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        goBackN();
-    } else if(protocolChoice == 2) {
-        //send protocol type to server
-        uint32_t protocolTypeToSend = htonl(protocolChoice);
-        sendto(sockfd, &protocolTypeToSend, sizeof(protocolTypeToSend),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        selectiveRepeat();
-    } else if(protocolChoice == 3) {
-        //send protocol type to server
-        uint32_t protocolTypeToSend = htonl(protocolChoice);
-        sendto(sockfd, &protocolTypeToSend, sizeof(protocolTypeToSend),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        stopAndWait();
-    } else {
-        cout<<"The protocol you chose was shit, ending program";
-    }
+    // send protocol use over to server
+    sendto(sockfd, &protocolChoice, sizeof(protocolChoice),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
     
     //send total file size to server
     uint32_t totalSizeTemp = htonl(fileSize);//
@@ -152,52 +113,7 @@ int clientFunction(){
     return sockfd;
 }
 
-// GBN protocol
-void goBackN() {
-    cout<<"we are in goBackN";
-}
 
-// SR protocol
-void selectiveRepeat() {
-    cout<<"we are in SR";
-}
-
-// SaW protocol
-void stopAndWait() {
-    cout<<"we are in stop and wait";
-}
-
-// Gets our file name and then opens our file
-FILE *get_file(char *fileName) {
-    const char *method = "rb";
-    FILE *fp = NULL;
-    while (!strlen(fileName) || !fp) {        
-        fp = fopen(fileName, method);
-    }
-    return fp;
-}
-
-// Gets the total size of our file
-int get_file_Size (FILE *fp) {
-    if (fseek(fp, 0, SEEK_END)) {
-        printf("Error: Unable to find end of file\n");
-        exit(1);
-    }
-    int size = ftell(fp);
-    // Back to beginning of file;
-    fseek(fp, 0, SEEK_SET);
-    return size;
-}
-
-// This prints the MD5 of our file with a systen call
-void printMD5(char *fileName){
-	  string filetbs = fileName;
-	  string md5file = "md5sum "+filetbs;
-	  const char *actualmd5 = md5file.c_str();
-	  cout<<"\nMD5:\n";
-	  system(actualmd5);
-	  cout<<"\n";
-}
 
 // Our main method. Sets up server connection then calls protocol
 int main(){
@@ -207,6 +123,3 @@ int main(){
     int clientSocket = clientFunction();
     close(clientSocket);//CLOSE CONNECTION
 }//END OF MAIN
-
-
-
