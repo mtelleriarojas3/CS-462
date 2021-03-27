@@ -3,6 +3,17 @@
 int n, len;
 struct sockaddr_in servaddr, cliaddr;
 
+typedef struct packet{
+    char data[1024];
+}Packet;
+
+typedef struct frame{
+    int frame_kind; //ACK:0, SEQ:1 FIN:2
+    int sq_no;
+    int ack;
+    Packet packet;
+}Frame;
+
 // Define functions
 int setupServerSocket();
 int receivePackets();
@@ -70,8 +81,8 @@ int receivePackets(){
     int protocolType;
     uint32_t totalSizeTemp;
     uint32_t tempPacketSize;
-    uint32_t tempProtocolType;
-    const char *outputFileName = "sample.txt"; 
+    //uint32_t tempProtocolType;
+    //const char *outputFileName = "sample.txt"; 
     int sockfd = setupServerSocket();
 
     printf("\n");
@@ -79,7 +90,7 @@ int receivePackets(){
     //grab protocol type from client
     recvfrom(sockfd, &protocolType, sizeof(protocolType), MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
     
- 
+    /**
     if(protocolType == 1) {
     
         goBackN();
@@ -92,7 +103,7 @@ int receivePackets(){
     
         stopAndWait();
         
-    }
+    }*/
   
 	  //grab the total size of the file
     recvfrom(sockfd, &totalSizeTemp, sizeof(totalSizeTemp), MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
@@ -103,6 +114,44 @@ int receivePackets(){
     recvfrom(sockfd, &tempPacketSize, sizeof(tempPacketSize), MSG_WAITALL, ( struct sockaddr *) &cliaddr,(socklen_t*)&len);
     packetSize = ntohl(tempPacketSize);
 	  cout<<"PACKET SIZE: "<<packetSize<<"\n"; 
+     
+    if(protocolType == 3) {
+        FILE *fp;
+        fp = fopen("sample.txt", "ab");
+        if(NULL == fp) {
+            printf("Error opening file");
+            return 1;
+        }
+        
+        char recvBuff[packetSize];
+        int len = strlen(recvBuff);
+        memset(recvBuff, '0', sizeof(recvBuff));
+        //int packetNum = 0;
+        //int bytesReceived = 0;
+        
+        int frame_id=0;
+	      Frame frame_recv;
+	      Frame frame_send;
+        
+        while(1) {
+            //int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr, &addr_size);
+            int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
+		        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
+			      printf("[+]Frame Received: %s\n", frame_recv.packet.data);
+			
+			      frame_send.sq_no = 0;
+			      frame_send.frame_kind = 0;
+			      frame_send.ack = frame_recv.sq_no + 1;
+			      //sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, addr_size);
+            sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr));
+			      printf("[+]Ack Send\n");
+		        }else{
+			          printf("[+]Frame Not Received\n");
+		        }
+		        frame_id++;
+        }
+    
+    }
 
     return sockfd;
 }//END OF METHOD
@@ -112,7 +161,7 @@ void goBackN() {
 }
 
 void selectiveRepeat() {
-    cout<<"we are in selective repeat\n";
+    
 }
 
 void stopAndWait() {
