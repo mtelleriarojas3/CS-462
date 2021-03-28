@@ -22,7 +22,7 @@ using namespace std;
 #define HEADER_LENGTH 4          // Frame header length
 
 //CONNECTION STUFF
-#define PORT 9696
+#define PORT 9090
 #define IP "10.34.40.33" //phoenix1 ip address
 #define MAXLINE 1024 
 #define MAXTIMEOUT 1000    //MAX TIMEOUT

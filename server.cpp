@@ -1,7 +1,6 @@
 #include "includes.h"
 #define SA struct sockaddr
 int n, len;
-struct sockaddr_in servaddr, cliaddr;
 
 typedef struct packet{
     char data[1024];
@@ -13,6 +12,10 @@ typedef struct frame{
     int ack;
     Packet packet;
 }Frame;
+
+struct sockaddr_in servaddr, cliaddr;
+
+
 
 // Define functions
 int setupServerSocket();
@@ -138,6 +141,8 @@ int receivePackets(){
             int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
 		        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
 			      printf("[+]Frame Received: %s\n", frame_recv.packet.data);
+                                   
+            fwrite(frame_recv.packet.data, 1, f_recv_size, fp); 
 			
 			      frame_send.sq_no = 0;
 			      frame_send.frame_kind = 0;

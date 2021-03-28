@@ -1,7 +1,5 @@
 #include "includes.h"
 #define SA struct sockaddr 
-struct sockaddr_in servaddr;
-int n, len;
 
 typedef struct packet{
     char data[1024];
@@ -13,6 +11,11 @@ typedef struct frame{
     int ack;
     Packet packet;
 }Frame;
+
+struct sockaddr_in servaddr;
+int n, len;
+
+
 
 // Define functions
 int clientFunction();
