@@ -1,4 +1,5 @@
 #include "includes.h"
+#include <sys/time.h>
 #define SA struct sockaddr 
 
 typedef struct packet{
@@ -12,10 +13,9 @@ typedef struct frame{
     Packet packet;
 }Frame;
 
+struct timeval tv;
 struct sockaddr_in servaddr;
 int n, len;
-
-
 
 // Define functions
 int clientFunction();
@@ -44,7 +44,7 @@ int callserver(){
     
     //ASSIGN IP, PORT 
     servaddr.sin_family = AF_INET; 
-    servaddr.sin_port = htons(PORT);
+    servaddr.sin_port = htons(9101);
     servaddr.sin_addr.s_addr = inet_addr(IP);
     
     // connect the client socket to server socket 
@@ -121,19 +121,23 @@ int clientFunction(){
     uint32_t tempPacketSize = htonl(packetSize);// 
     sendto(sockfd, &tempPacketSize, sizeof(tempPacketSize),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
     
+    //send packet size to server
+    uint32_t tempWindowSize = htonl(slidingWindowSize);// 
+    sendto(sockfd, &tempWindowSize, sizeof(tempWindowSize),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+    
     if(protocolChoice == 3) {
         int frame_id = 0;
 	      Frame frame_send;
 	      Frame frame_recv;
 	      int ack_recv = 1;
              
-        //const char * fileToBeSentChar = fileToBeSent.c_str();
         FILE *fp = fopen("test.txt","rb");
         if(fp==NULL) {
             printf("File open error\n");
             return 1;   
         }
         
+        int packetNum = 0;
         while(1) {
             char buff[packetSize];
             int nread = fread(buff,1,packetSize,fp);
@@ -142,28 +146,32 @@ int clientFunction(){
                 if(ack_recv == 1){
                     frame_send.sq_no = frame_id;
     			          frame_send.frame_kind = 1;
-    			          frame_send.ack = 0;		
-    	
-    			          //printf("Enter Data: ");
-    			          //scanf("%s", buffer);
+    			          frame_send.ack = 0;
     			          strcpy(frame_send.packet.data, buff);
     			          sendto(sockfd, &frame_send, sizeof(Frame), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
-    			          printf("[+]Frame Send\n");
+    			          printf("Packet %d sent\n", packetNum);
     		        }
-    		        //int *addr_size = sizeof(servaddr);
-    		        //int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(frame_recv), 0 ,(struct sockaddr*)&servaddr, sizeof(servaddr));
+                tv.tv_sec = 2;
+                tv.tv_usec = 0;
+                setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
                 int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(frame_recv), 0 ,(struct sockaddr*)&servaddr,(socklen_t*)&len);
+                if(f_recv_size > 0) {
+                    //cout<< "message received";
+                } else {
+                    //cout<< "message timeout";
+                }
     		
     		        if( f_recv_size > 0 && frame_recv.sq_no == 0 && frame_recv.ack == frame_id+1){
-    			          printf("[+]Ack Received\n");
+    			          printf("Ack %d received\n", frame_id);
     			          ack_recv = 1;
     		        }else{
     			          printf("[-]Ack Not Received\n");
     			          ack_recv = 0;
     		        }	
-    		        frame_id++;	
-            }
-        }
+    		        frame_id++;
+                packetNum++;
+            }                        
+        }                      
     }
     	
     // Close our file and print the MD5 of said file
@@ -171,12 +179,6 @@ int clientFunction(){
     printMD5(fileName); 
     return sockfd;
 }
-
-void stopAndWait(int packetSize) {
-	
-}
-
-
 
 // Our main method. Sets up server connection then calls protocol
 int main(){

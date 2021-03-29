@@ -22,7 +22,7 @@ using namespace std;
 #define HEADER_LENGTH 4          // Frame header length
 
 //CONNECTION STUFF
-#define PORT 9090
+#define PORT 9101
 #define IP "10.34.40.33" //phoenix1 ip address
 #define MAXLINE 1024 
 #define MAXTIMEOUT 1000    //MAX TIMEOUT
@@ -44,9 +44,6 @@ typedef unsigned int uint32;
 const uint32 SERVERWINDOWSIZE = 8;   // Server window size
 const uint32 RECIEVINGWINDOWSIZE = 8;   // Recieving window size
 const uint32 SEQUENCENUMBER = 32;   // Sequence Number
-
-
-
 
 void printMD5(char *fileName);
 FILE *get_file(char *fileName);
