@@ -110,6 +110,7 @@ int receivePackets(){
     windowSize = ntohl(tempWindowSize);
 	  cout<<"SLIDING WINDOW SIZE: "<<windowSize<<"\n";
     
+<<<<<<< HEAD
     //Selective Repeat
     if(protocolType == 2) {
         Frame frame;
@@ -138,6 +139,19 @@ int receivePackets(){
             printf("Error opening file");
             return 1;
         }
+=======
+
+    
+    //Stop and Wait
+    if(protocolType == 3) {
+        // File Stuff
+        FILE *fp;
+        fp = fopen("sample.txt", "wb+");//ab
+        if(NULL == fp) {
+            printf("Error opening file");
+            return 1;
+        }
+>>>>>>> main
         
         //Variables
         char recvBuff[packetSize];
@@ -149,14 +163,43 @@ int receivePackets(){
         int packetNum = 0;
         int ackNum = 0;
         
+<<<<<<< HEAD
+=======
+        //////
+       	ofstream fileReceived; 
+	      fileReceived.open("sample.out", ios::out | ios::trunc);
+        
+        //////
+        
+>>>>>>> main
         //Loop indefinitely
         while(1) {
             int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
 		        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
+<<<<<<< HEAD
 			      printf("Packet %d received\n", packetNum);
             std::string test;
             test += frame_recv.packet.data;                  
             fwrite(test.c_str(), 1, test.size(), fp); 
+=======
+            printf("Received: %s\n", frame_recv.packet.data); 
+			      printf("Packet %d received\n", packetNum);
+             
+             
+            //fwrite(frame_recv.packet.data, 1, f_recv_size, fp);          
+            
+            fwrite(frame_recv.packet.data, 1, totalFileSize, fp);
+            fileReceived.write((char*)(frame_recv.packet.data), packetSize);
+            
+                   
+            std::string test;
+            test += frame_recv.packet.data; 
+            //cout<<"THIS IS WHAT TEST IS: " <<test;
+                       
+            //fwrite(test.data(),1, totalFileSize, fp); 
+            //fwrite(test.c_str(), 1, 1, fp);
+            
+>>>>>>> main
 			      frame_send.sq_no = 0;
 			      frame_send.frame_kind = 0;
 			      frame_send.ack = frame_recv.sq_no + 1;
@@ -168,6 +211,10 @@ int receivePackets(){
             ackNum++;
             packetNum++;
  		        frame_id++;
+<<<<<<< HEAD
+=======
+            bzero(frame_recv.packet.data, packetSize);
+>>>>>>> main
         }
     }
     return sockfd;

@@ -170,6 +170,10 @@ int clientFunction(){
     		        }	
     		        frame_id++;
                 packetNum++;
+<<<<<<< HEAD
+=======
+                bzero(buff, packetSize);/////////////
+>>>>>>> main
             }                        
         }                      
     }
