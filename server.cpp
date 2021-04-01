@@ -15,8 +15,6 @@ typedef struct frame{
 
 struct sockaddr_in servaddr, cliaddr;
 
-
-
 // Define functions
 int setupServerSocket();
 int receivePackets();
@@ -110,7 +108,6 @@ int receivePackets(){
     windowSize = ntohl(tempWindowSize);
 	  cout<<"SLIDING WINDOW SIZE: "<<windowSize<<"\n";
     
-<<<<<<< HEAD
     //Selective Repeat
     if(protocolType == 2) {
         Frame frame;
@@ -120,39 +117,23 @@ int receivePackets(){
         bool run = true;
         bool slidingWindow[windowSize];
         for(int i = 0; i < windowSize; i++) {
-            test[i] = false;
+            //test[i] = false;
         }
         while(run) {
-            int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
-		        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
+            //int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
+		        //if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
                     
-            }
+            //}
         }
     }
     
-    //Stop and Wait
-    if(protocolType == 3) {
-        // File Stuff
-        FILE *fp;
-        fp = fopen("sample.txt", "ab");
-        if(NULL == fp) {
-            printf("Error opening file");
-            return 1;
-        }
-=======
-
-    
-    //Stop and Wait
-    if(protocolType == 3) {
-        // File Stuff
-        FILE *fp;
-        fp = fopen("sample.txt", "wb+");//ab
-        if(NULL == fp) {
-            printf("Error opening file");
-            return 1;
-        }
->>>>>>> main
+    //Selective Repeat
+    if(protocolType == 2) {
         
+    }
+
+    //SaW Protocol
+    if(protocolType == 3) {
         //Variables
         char recvBuff[packetSize];
         int len = strlen(recvBuff);
@@ -162,59 +143,32 @@ int receivePackets(){
 	      Frame frame_send;
         int packetNum = 0;
         int ackNum = 0;
+       	ofstream fileReceived;
+        int run = 1;
         
-<<<<<<< HEAD
-=======
-        //////
-       	ofstream fileReceived; 
-	      fileReceived.open("sample.out", ios::out | ios::trunc);
-        
-        //////
-        
->>>>>>> main
         //Loop indefinitely
-        while(1) {
+        while(run) {
             int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
 		        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
-<<<<<<< HEAD
-			      printf("Packet %d received\n", packetNum);
-            std::string test;
-            test += frame_recv.packet.data;                  
-            fwrite(test.c_str(), 1, test.size(), fp); 
-=======
-            printf("Received: %s\n", frame_recv.packet.data); 
-			      printf("Packet %d received\n", packetNum);
-             
-             
-            //fwrite(frame_recv.packet.data, 1, f_recv_size, fp);          
-            
-            fwrite(frame_recv.packet.data, 1, totalFileSize, fp);
-            fileReceived.write((char*)(frame_recv.packet.data), packetSize);
-            
-                   
-            std::string test;
-            test += frame_recv.packet.data; 
-            //cout<<"THIS IS WHAT TEST IS: " <<test;
-                       
-            //fwrite(test.data(),1, totalFileSize, fp); 
-            //fwrite(test.c_str(), 1, 1, fp);
-            
->>>>>>> main
-			      frame_send.sq_no = 0;
-			      frame_send.frame_kind = 0;
-			      frame_send.ack = frame_recv.sq_no + 1;
-            sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr));
-			      printf("Ack %d sent\n", ackNum);
+    			      printf("Packet %d received\n", packetNum);
+                std::string test;
+                test += frame_recv.packet.data;                  
+                //fwrite(test.c_str(), 1, test.size(), fp); 
+                printf("Received: %s\n", frame_recv.packet.data); 
+    			      printf("Packet %d received\n", packetNum);
+    			      frame_send.sq_no = 0;
+    			      frame_send.frame_kind = 0;
+    			      frame_send.ack = frame_recv.sq_no + 1;
+                sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr));
+    			      printf("Ack %d sent\n", ackNum);
 		        } else {
 			          printf("Packet Not Received\n");
+                run = 0;
 		        }
             ackNum++;
             packetNum++;
  		        frame_id++;
-<<<<<<< HEAD
-=======
             bzero(frame_recv.packet.data, packetSize);
->>>>>>> main
         }
     }
     return sockfd;

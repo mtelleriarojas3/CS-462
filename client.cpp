@@ -125,6 +125,7 @@ int clientFunction(){
     uint32_t tempWindowSize = htonl(slidingWindowSize);// 
     sendto(sockfd, &tempWindowSize, sizeof(tempWindowSize),MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
     
+    //SaW Protocol
     if(protocolChoice == 3) {
         int frame_id = 0;
 	      Frame frame_send;
@@ -137,12 +138,14 @@ int clientFunction(){
             return 1;   
         }
         
+        int run = 1;
         int packetNum = 0;
-        while(1) {
+        int reTranPackets = 0;
+        while(run) {
             char buff[packetSize];
             int nread = fread(buff,1,packetSize,fp);
-            
             if(nread > 0) {
+                cout << nread;
                 if(ack_recv == 1){
                     frame_send.sq_no = frame_id;
     			          frame_send.frame_kind = 1;
@@ -155,12 +158,6 @@ int clientFunction(){
                 tv.tv_usec = 0;
                 setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
                 int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(frame_recv), 0 ,(struct sockaddr*)&servaddr,(socklen_t*)&len);
-                if(f_recv_size > 0) {
-                    //cout<< "message received";
-                } else {
-                    //cout<< "message timeout";
-                }
-    		
     		        if( f_recv_size > 0 && frame_recv.sq_no == 0 && frame_recv.ack == frame_id+1){
     			          printf("Ack %d received\n", frame_id);
     			          ack_recv = 1;
@@ -170,15 +167,19 @@ int clientFunction(){
     		        }	
     		        frame_id++;
                 packetNum++;
-<<<<<<< HEAD
-=======
-                bzero(buff, packetSize);/////////////
->>>>>>> main
+                bzero(buff, packetSize);
+            } else {
+                run = 0; 
+                int done = -1;
+                sendto(sockfd, &done, sizeof(done), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
+                cout << "\n";
             }                        
-        }                      
-    }
-    	
-    // Close our file and print the MD5 of said file
+        }   
+        // End of file stuff
+        cout << "Number of original packets sent: " << packetNum << "\n";
+        cout << "Number of retransmitted packets: ";                  
+    }	
+    
     fclose(infile);
     printMD5(fileName); 
     return sockfd;
