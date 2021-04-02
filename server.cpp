@@ -21,6 +21,7 @@ int receivePackets();
 void goBackN();
 void selectiveRepeat();
 void stopAndWait();
+char checksum(char *frame, int count);
 
 /**
  * This function sets up our server sockets to listen from the client
@@ -110,21 +111,7 @@ int receivePackets(){
     
     //Selective Repeat
     if(protocolType == 2) {
-        Frame frame;
-        int sequenceNumber = 0;
-        bool nACKSent = false;
-        bool ack = false;
-        bool run = true;
-        bool slidingWindow[windowSize];
-        for(int i = 0; i < windowSize; i++) {
-            //test[i] = false;
-        }
-        while(run) {
-            //int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
-		        //if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
-                    
-            //}
-        }
+        
     }
     
     //Selective Repeat
@@ -141,10 +128,19 @@ int receivePackets(){
         int frame_id=0;
 	      Frame frame_recv;
 	      Frame frame_send;
+        Frame frame_checksum;
         int packetNum = 0;
         int ackNum = 0;
        	ofstream fileReceived;
         int run = 1;
+        int reTranPackets = 0;
+        
+        FILE *fp;
+        fp = fopen("Sample.txt", "ab");
+        if(NULL == fp) {
+            printf("Error opening file");
+            return 1;
+        }
         
         //Loop indefinitely
         while(run) {
@@ -153,9 +149,17 @@ int receivePackets(){
     			      printf("Packet %d received\n", packetNum);
                 std::string test;
                 test += frame_recv.packet.data;                  
-                //fwrite(test.c_str(), 1, test.size(), fp); 
-                printf("Received: %s\n", frame_recv.packet.data); 
-    			      printf("Packet %d received\n", packetNum);
+                fwrite(test.c_str(), 1, test.size(), fp); 
+                int f_checksum_size = recvfrom(sockfd, &frame_checksum, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
+                if(f_checksum_size > 0 && frame_checksum.frame_kind == 1 && frame_checksum.sq_no == frame_id) {
+                      char test1 = checksum(frame_checksum.packet.data, f_checksum_size);
+                      char test2 = checksum(frame_recv.packet.data, f_recv_size);
+                      if(test1 == test2) {
+                          cout << "Checksum OK \n";
+                      } else {
+                          cout << "Checksum failed \n";
+                      }
+                }
     			      frame_send.sq_no = 0;
     			      frame_send.frame_kind = 0;
     			      frame_send.ack = frame_recv.sq_no + 1;
@@ -163,6 +167,7 @@ int receivePackets(){
     			      printf("Ack %d sent\n", ackNum);
 		        } else {
 			          printf("Packet Not Received\n");
+                reTranPackets++;
                 run = 0;
 		        }
             ackNum++;
@@ -170,9 +175,26 @@ int receivePackets(){
  		        frame_id++;
             bzero(frame_recv.packet.data, packetSize);
         }
+        packetNum-=2;
+        reTranPackets--;
+        cout << "Last packet seq# received: " << packetNum << "\n";
+        cout << "Number of original packets received: " << packetNum << "\n";
+        cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
     }
     return sockfd;
 }//END OF METHOD
+
+char checksum(char *frame, int count) {
+    u_long sum = 0;
+    while (count--) {
+        sum += *frame++;
+        if (sum & 0xFFFF0000) {
+            sum &= 0xFFFF;
+            sum++; 
+        }
+    }
+    return (sum & 0xFFFF);
+}
 
 //MAIN FUNCTION
 int main(){

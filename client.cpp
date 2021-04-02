@@ -141,11 +141,12 @@ int clientFunction(){
         int run = 1;
         int packetNum = 0;
         int reTranPackets = 0;
+        auto start = high_resolution_clock::now();
         while(run) {
             char buff[packetSize];
             int nread = fread(buff,1,packetSize,fp);
             if(nread > 0) {
-                cout << nread;
+                //cout << nread;
                 if(ack_recv == 1){
                     frame_send.sq_no = frame_id;
     			          frame_send.frame_kind = 1;
@@ -154,6 +155,9 @@ int clientFunction(){
     			          sendto(sockfd, &frame_send, sizeof(Frame), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
     			          printf("Packet %d sent\n", packetNum);
     		        }
+                Frame tempFrame = frame_send;
+                //cout << tempFrame.packet.data << "\n";
+                sendto(sockfd, &tempFrame, sizeof(Frame), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
                 tv.tv_sec = 2;
                 tv.tv_usec = 0;
                 setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
@@ -162,7 +166,9 @@ int clientFunction(){
     			          printf("Ack %d received\n", frame_id);
     			          ack_recv = 1;
     		        }else{
-    			          printf("[-]Ack Not Received\n");
+    			          cout << "Packet " << packetNum << " *****Timed Out*****";
+                    cout << "Packet " << packetNum << " Re-transmitted.";
+                    reTranPackets++;
     			          ack_recv = 0;
     		        }	
     		        frame_id++;
@@ -174,14 +180,20 @@ int clientFunction(){
                 sendto(sockfd, &done, sizeof(done), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
                 cout << "\n";
             }                        
-        }   
+        }  
+        packetNum--; 
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<seconds>(stop - start);
         // End of file stuff
         cout << "Number of original packets sent: " << packetNum << "\n";
-        cout << "Number of retransmitted packets: ";                  
+        cout << "Number of retransmitted packets: " << reTranPackets << "\n";  
+        cout << "Total elapsed time: " << duration.count() << " seconds\n"; 
+        cout << "Total throughput (Mbps): \n" /*<< (((double)((fileSize + reTranPackets * packetSize)) * 8) / duration) / 1000000 << "\n"*/; 
+        cout << "Effective throughput: \n" /*<< ((double)(fileSize * 8) / duration) / 1000000*/;
     }	
     
     fclose(infile);
-    printMD5(fileName); 
+    //printMD5(fileName); 
     return sockfd;
 }
 
