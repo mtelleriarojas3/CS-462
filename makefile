@@ -1,25 +1,11 @@
-#Makefile
+  
+all: server client
 
-CC = g++
-CFLAGS = -std=c++0x -g -Wall -pthread
+server: includes.h includes.cpp server.cpp
+	g++ -std=c++11 -pthread includes.cpp server.cpp -o server
 
-all: client server
+client: includes.h includes.cpp client.cpp
+	g++ -std=c++11 -pthread includes.cpp client.cpp -o client
 
-client: client.o includes.o 
-	$(CC) $(CFLAGS) -o client client.o includes.o 
-
-server: server.o includes.o 
-	$(CC) $(CFLAGS) -o server server.o includes.o 
-
-client.o: client.cpp
-	$(CC) $(CFLAGS) -c client.cpp
-
-server.o: server.cpp
-	$(CC) $(CFLAGS) -c server.cpp
-
-includes.o: includes.cpp includes.h
-	$(CC) $(CFLAGS) -c includes.cpp
-
-clean:
-	rm ./server
-	rm ./client
+clean: server client
+	rm -f server client
