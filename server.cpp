@@ -7,7 +7,19 @@ int sockfd;
 struct sockaddr_in servaddr, cliaddr;
 int len;
 
+typedef struct packet{
+    char data[1024];
+}Packet;
+
+typedef struct frame{
+    int frame_kind; //ACK:0, SEQ:1 FIN:2
+    int sq_no;
+    int ack;
+    Packet packet;
+}Frame;
+
 void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
+void run_SaW(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
 
 
 void send_ack() {
@@ -98,13 +110,13 @@ void serverFunction(){
     
     
     if(protocolChoice == 1){
-    
+        //Call Go Back N Protocol
     }else if(protocolChoice == 2){
-    
-      run_SR(packetSize,window_len, max_buffer_size, outputFile);
-      
+        //Call Selective Repeat Protocol
+        run_SR(packetSize,window_len, max_buffer_size, outputFile);
     }else if(protocolChoice == 3) {
-    
+        //Call Stop and Wait Protocol
+        run_SaW(packetSize, window_len, max_buffer_size, outputFile);
     }else{
       //print error message
     }
@@ -114,7 +126,6 @@ void serverFunction(){
 }//end of serverfunction
 
 void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile){
-
     //Open our file to put receive buffers in
     FILE *file = fopen(outputFile, "wb");
     char buffer[max_buffer_size];
@@ -220,23 +231,75 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
     }
     stdby_thread.detach();
     cout<<"\n";
-
-
 }
 
-
+void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
+    //Variables
+    char recvBuff[packetSize];
+    int len = strlen(recvBuff);
+    memset(recvBuff, '0', sizeof(recvBuff));
+    int frame_id=0;
+    Frame frame_recv;
+    Frame frame_send;
+    Frame frame_checksum;
+    int packetNum = 0;
+    int ackNum = 0;
+   	//ofstream fileReceived;
+    int run = 1;
+    int reTranPackets = 0;
+        
+    FILE *fp;
+    fp = fopen("Sample.txt", "ab");
+    if(NULL == fp) {
+        printf("Error opening file");
+        exit(1);
+    }
+    //Loop indefinitely
+    while(run) {
+        int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
+        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id){
+		        printf("Packet %d received\n", packetNum);
+            std::string test;
+            test += frame_recv.packet.data;                  
+            fwrite(test.c_str(), 1, test.size(), fp); 
+            int f_checksum_size = recvfrom(sockfd, &frame_checksum, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
+            if(f_checksum_size > 0 && frame_checksum.frame_kind == 1 && frame_checksum.sq_no == frame_id) {
+                char test1 = checksum(frame_checksum.packet.data, f_checksum_size);
+                char test2 = checksum(frame_recv.packet.data, f_recv_size);
+                if(test1 == test2) {
+                    cout << "Checksum OK \n";
+                } else {
+                    cout << "Checksum failed \n";
+                }
+            }
+ 			      frame_send.sq_no = 0;
+ 			      frame_send.frame_kind = 0;
+ 			      frame_send.ack = frame_recv.sq_no + 1;
+            sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr));
+ 			      printf("Ack %d sent\n", ackNum);
+        } else {
+            printf("Packet Not Received\n");
+            reTranPackets++;
+            run = 0;
+        }
+        ackNum++;
+        packetNum++;
+        frame_id++;
+        bzero(frame_recv.packet.data, packetSize);
+    }
+    packetNum-=2;
+    reTranPackets--;
+    cout << "Last packet seq# received: " << packetNum << "\n";
+    cout << "Number of original packets received: " << packetNum << "\n";
+    cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
+}
 
 int main() {
-
     //INTRO MESSAGE	
     cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
-    
     //SET UP SERVER SOCKET
     setupServerSocket();
-    
     //call server function
     serverFunction();
-    
-    
     return 0;
 }

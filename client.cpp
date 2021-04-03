@@ -147,6 +147,7 @@ void menu(){
         run_SR(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 3){
         //RUN SaW
+        run_SaW(packetSize, slidingWindowSize, fileName, timeout);
     }
 }//end of menu 
 
@@ -165,7 +166,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     char buffer[max_buffer_size];
     int buffer_size;
 
-    //THE THREAD WILL START LISTENING FOR ACK
+   //THE THREAD WILL START LISTENING FOR ACK
     thread recv_thread(listen_ack);
 
     char frame[MAX_FRAME_SIZE];
@@ -173,10 +174,11 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int frame_size;
     int data_size;
 
-    //SEND FILE
+   //SEND FILE
     bool read_done = false;
-    int buffer_num = 0;
+    int packet = 0;
     while (!read_done) {
+
         //READ PART OF FILE TO BUFFER
         buffer_size = fread(buffer, 1, max_buffer_size, file);
         if (buffer_size == max_buffer_size) {
@@ -202,14 +204,17 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         }
         lar = -1;
         lfs = lar + window_len;
+
         window_info_mutex.unlock();
         
         //Send current buffer with sliding window
         bool send_done = false;
-        int packet = 0;
+        
         while (!send_done) {
-            window_info_mutex.lock();
 
+            
+            window_info_mutex.lock();
+            
             //Check window ack mask, shift window if possible
             if (window_ack_mask[0]) {
                 int shift = 1;
@@ -229,38 +234,58 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                 lar += shift;
                 lfs = lar + window_len;
             }
+            
+            
+            
             window_info_mutex.unlock();
 
-            //Send frames that has not been sent or has timed out
+            //Send frames that have not been sent or have timed out
             for (int i = 0; i < window_len; i ++) {
                 seq_num = lar + i + 1;
+                
+                
+                
                 if (seq_num < seq_count) {
+               
                     window_info_mutex.lock();
+                  
                     if (!window_sent_mask[i] || (!window_ack_mask[i] && (elapsed_time(current_time(), window_sent_time[i]) > timeout))) {
+                    ////
+                    
                         int buffer_shift = seq_num * MAX_DATA_SIZE;
                         data_size = (buffer_size - buffer_shift < MAX_DATA_SIZE) ? (buffer_size - buffer_shift) : MAX_DATA_SIZE;
                         memcpy(data, buffer + buffer_shift, data_size);
+                        
                         bool eot = (seq_num == seq_count - 1) && (read_done);
                         frame_size = create_frame(seq_num, frame, data, data_size, eot);
-                        sendto(sockfd, frame, frame_size, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+
+                        sendto(sockfd, frame, frame_size, 0, 
+                                (const struct sockaddr *) &servaddr, sizeof(servaddr));
+                        cout<<"\nPacket "<<packet<<" *****Timed Out*****\n";
+                        cout<<"Packet "<<packet<<" Re-transmitted.\n";       
+                                
                         window_sent_mask[i] = true;
                         window_sent_time[i] = current_time();
                     }
                     window_info_mutex.unlock();
                 }
             }
+                
             //Move to next buffer if all frames in current buffer has been acked
-            if (lar >= seq_count - 1) send_done = true;
+            if (lar >= seq_count - 1) 
+            send_done = true;
         }
+                            
+        cout<<"\nPacket " <<packet<< " sent\n"; 
         packet++;
-        cout<<"Packet " <<packet<< " sent\n";                    
-        buffer_num += 1;
         if (read_done) break;
     }
+    
     fclose(file);
     delete [] window_ack_mask;
     delete [] window_sent_time;
     recv_thread.detach();
+    
     printMD5(fileName);
 }//end of run_SR
 
@@ -270,7 +295,9 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     Frame frame_send;
     Frame frame_recv;
     int ack_recv = 1;
+    int totalFileSize;
              
+    //totalFileSize = get_file_Size(fileName);
     FILE *fp = fopen("test.txt","rb");
     if(fp==NULL) {
         printf("File open error\n");
