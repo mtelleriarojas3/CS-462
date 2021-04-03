@@ -33,7 +33,6 @@ void send_ack() {
 
 
 void setupServerSocket(){
-
     int port = 9001;
     char buffer[MAXLINE];
     const char *ConnConfirm = "Connected to server successfully!\n";
@@ -55,8 +54,8 @@ void setupServerSocket(){
         cerr << "socket binding failed" << endl;
     }
 
-  int n;  
-        //We have no clients yet
+    int n;  
+    //We have no clients yet
     cout<<"No clients connected at the moment...\n";
 
     len = sizeof(cliaddr);  //len is value/result
@@ -68,37 +67,37 @@ void setupServerSocket(){
 
     sendto(sockfd, (const char *)ConnConfirm, strlen(ConnConfirm), MSG_CONFIRM, (const struct sockaddr *) &cliaddr,len);
     memset(buffer, 0, sizeof(buffer));
-    
 }//end of setupserversocket
 
 
-
+/**
+ * This function sets up our server and prompts the user. It then calls the respective protocol to transfer the file.
+ */
 void serverFunction(){
-
     int protocolChoice;
     int packetSize;
     int slidingWindowSize;
     
-
     //RECEIVE PROTOCOL CHOICE
     recvfrom(sockfd, &protocolChoice, sizeof(protocolChoice), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
     
     //RECEIVE PACKETSIZE
-     recvfrom(sockfd, &packetSize, sizeof(packetSize), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
+    recvfrom(sockfd, &packetSize, sizeof(packetSize), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
     
     //RECEIVE SLIDING WINDOW SIZE
-     recvfrom(sockfd, &slidingWindowSize, sizeof(slidingWindowSize), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
+    recvfrom(sockfd, &slidingWindowSize, sizeof(slidingWindowSize), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
 
-
+    //Variables
     int window_len = slidingWindowSize;
     int max_buffer_size = packetSize;
     char outputFile[] = "received.txt";
    
+    //Open our file to put receive buffers in
     FILE *file = fopen(outputFile, "wb");
     char buffer[max_buffer_size];
     int buffer_size;
 
-    /* Initialize sliding window variables */
+    //Initialize sliding window variables 
     char frame[MAX_FRAME_SIZE];
     char data[MAX_DATA_SIZE];
     char ack[ACK_SIZE];
@@ -109,7 +108,7 @@ void serverFunction(){
     bool eot;
     bool frame_error;
 
-    /* Receive frames until EOT */
+    //Receive frames until end of transmission
     int packet = 0;
     int ackCount = 0;
     bool recv_done = false;
@@ -134,22 +133,18 @@ void serverFunction(){
                     &clientSize);
             frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
          
-            
             packet++;
             cout<<"\nPacket " << packet << " received!\n";
             
             create_ack(recv_seq_num, ack, frame_error);
-            sendto(sockfd, ack, ACK_SIZE, 0, 
-                    (const struct sockaddr *) &cliaddr, clientSize);
+            sendto(sockfd, ack, ACK_SIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
             ackCount++;
             cout<<"Ack " <<ackCount<< " sent!\n";
             if (recv_seq_num <= laf) {
                 if (!frame_error) {
                     int buffer_shift = recv_seq_num * MAX_DATA_SIZE;
-
                     if (recv_seq_num == lfr + 1) {
                         memcpy(buffer + buffer_shift, data, data_size);
-
                         int shift = 1;
                         for (int i = 1; i < window_len; i++) {
                             if (!window_recv_mask[i]) break;
@@ -169,7 +164,6 @@ void serverFunction(){
                             window_recv_mask[recv_seq_num - (lfr + 1)] = true;
                         }
                     }
-
                     /* Set max sequence to sequence of frame with EOT */ 
                     if (eot) {
                         buffer_size = buffer_shift + data_size;
@@ -178,19 +172,17 @@ void serverFunction(){
                     }
                 }
             }
-            
             /* Move to next buffer if all frames in current buffer has been received */
             if (lfr >= recv_seq_count - 1) break;
         }
-
-
+        //Write to our file
         fwrite(buffer, 1, buffer_size, file);
         buffer_num += 1;
     }
-
+    //Close file when done
     fclose(file);
 
-    /* Start thread to keep sending requested ack to sender for 3 seconds */
+    //Start thread to keep sending requested ack to sender for 3 seconds 
     thread stdby_thread(send_ack);
     time_stamp start_time = current_time();
     while (elapsed_time(current_time(), start_time) < STDBY_TIME) {
@@ -206,13 +198,7 @@ void serverFunction(){
     stdby_thread.detach();
     cout<<"\n";
     printMD5(outputFile);
-
 }//end of serverfunction
-
-
-
-
-
 
 int main() {
 

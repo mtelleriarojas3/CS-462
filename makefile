@@ -1,4 +1,3 @@
-  
 all: server client
 
 server: includes.h includes.cpp server.cpp

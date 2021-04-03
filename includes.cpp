@@ -2,6 +2,7 @@
 
 #include <iostream>
 using namespace std;
+using namespace std::chrono;
 
 //PRINT MD5
 void printMD5(char *fileName){
