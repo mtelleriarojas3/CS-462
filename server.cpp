@@ -6,6 +6,10 @@ using namespace std;
 int sockfd;
 struct sockaddr_in servaddr, cliaddr;
 int len;
+
+void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
+
+
 void send_ack() {
     char frame[MAX_FRAME_SIZE];
     char data[MAX_DATA_SIZE];
@@ -91,7 +95,26 @@ void serverFunction(){
     int window_len = slidingWindowSize;
     int max_buffer_size = packetSize;
     char outputFile[] = "received.txt";
+    
+    
+    if(protocolChoice == 1){
+    
+    }else if(protocolChoice == 2){
+    
+      run_SR(packetSize,window_len, max_buffer_size, outputFile);
+      
+    }else if(protocolChoice == 3) {
+    
+    }else{
+      //print error message
+    }
    
+
+    printMD5(outputFile);
+}//end of serverfunction
+
+void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile){
+
     //Open our file to put receive buffers in
     FILE *file = fopen(outputFile, "wb");
     char buffer[max_buffer_size];
@@ -197,8 +220,11 @@ void serverFunction(){
     }
     stdby_thread.detach();
     cout<<"\n";
-    printMD5(outputFile);
-}//end of serverfunction
+
+
+}
+
+
 
 int main() {
 
