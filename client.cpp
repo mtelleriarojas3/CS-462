@@ -123,7 +123,7 @@ void menu(){
     cin >> slidingWindowSize;
     
     // Gets our Situation error choice
-    cout << "\nSituational errors:\n1)drop packets\n2)lose acks\n-> ";
+    cout << "\nDo you want to create errors?\n1)Yes\n2)No\n-> ";
     cin >> errorsChoice;
 
     // Gets our file name from user
@@ -233,6 +233,8 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                 }
                 lar += shift;
                 lfs = lar + window_len;
+               
+                
             }
             
             
@@ -257,12 +259,19 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                         memcpy(data, buffer + buffer_shift, data_size);
                         
                         bool eot = (seq_num == seq_count - 1) && (read_done);
+                        
+                        if(eot == true){
+                        
+                          cout<<"\nPacket "<<packet<<" *****Timed Out*****\n";
+                          cout<<"Packet "<<packet<<" Re-transmitted.\n"; 
+                        
+                        }
+
+                        
                         frame_size = create_frame(seq_num, frame, data, data_size, eot);
 
                         sendto(sockfd, frame, frame_size, 0, 
-                                (const struct sockaddr *) &servaddr, sizeof(servaddr));
-                        cout<<"\nPacket "<<packet<<" *****Timed Out*****\n";
-                        cout<<"Packet "<<packet<<" Re-transmitted.\n";       
+                                (const struct sockaddr *) &servaddr, sizeof(servaddr));     
                                 
                         window_sent_mask[i] = true;
                         window_sent_time[i] = current_time();
@@ -274,6 +283,8 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
             //Move to next buffer if all frames in current buffer has been acked
             if (lar >= seq_count - 1) 
             send_done = true;
+            //cout<<"Let's see what this prints: " << "LAR -> " <<lar<<" LFS -> " <<lfs<<"\n"; 
+            //cout<<"seq count: " <<lar<<" seq_num: " <<seq_num<<"\n";
         }
                             
         cout<<"\nPacket " <<packet<< " sent\n"; 

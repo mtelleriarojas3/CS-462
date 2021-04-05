@@ -41,6 +41,11 @@ void send_ack() {
                 &clientSize);
         frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
         
+        /////
+        //cout<< frame_error;
+        /////
+        
+        
         create_ack(recv_seq_num, ack, frame_error);
         sendto(sockfd, ack, ACK_SIZE, 0, 
                 (const struct sockaddr *) &cliaddr, clientSize);
@@ -166,10 +171,17 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
                     MSG_WAITALL, (struct sockaddr *) &cliaddr, 
                     &clientSize);
             frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
-         
+            if(frame_size > 0){ 
             packet++;
             cout<<"\nPacket " << packet << " received!\n";
+                
+                if(frame_error == 0){
+                  cout<<"CheckSum OK\n";
+                }else{
+                  cout<<"Checksum failed\n";
+                }
             
+            }
             create_ack(recv_seq_num, ack, frame_error);
             sendto(sockfd, ack, ACK_SIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
             ackCount++;
@@ -249,7 +261,7 @@ void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
     int reTranPackets = 0;
         
     FILE *fp;
-    fp = fopen("Sample.txt", "ab");
+    fp = fopen("received.txt", "ab");
     if(NULL == fp) {
         printf("Error opening file");
         exit(1);

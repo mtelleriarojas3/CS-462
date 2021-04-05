@@ -25,6 +25,7 @@ char checksum(char *frame, int count) {
             sum++; 
         }
     }
+   // printf("THIS IS WHAT CHECKSUM RETURNS: %lu\n", (sum & 0xFFFF));
     return (sum & 0xFFFF);
 }
 
