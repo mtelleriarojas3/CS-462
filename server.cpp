@@ -167,6 +167,11 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
             if(frame_size > 0){ 
                 packet++;
                 cout<<"\nPacket " << packet << " received\n";
+                cout<<"Current Window: [";
+                for(int i = packet; i < ((packet + window_len)-1); i++) {
+                    cout << i << ", ";
+                } 
+                cout << (packet + window_len) << "]\n";
                 if(frame_error == 0){
                     cout<<"CheckSum OK\n";
                 }else{
@@ -178,7 +183,6 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
             sendto(sockfd, ack, ACK_SIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
             ackCount++;
             cout<<"Ack " <<ackCount<< " sent\n";
-            cout << "HERE WE ARE FOR THE ARRAY\n";
             if (recv_seq_num <= laf) {
                 if (!frame_error) {
                     int buffer_shift = recv_seq_num * MAX_DATA_SIZE;
@@ -289,7 +293,7 @@ void run_GBN(int packetSize, int window_len, int max_buffer_size, char *test) {
             reTranPackets++;
             run = 0;
         }
-        cout << "Current window = [1]\n";
+        cout << "Current window = [1]\n\n";
         ackNum++;
         packetNum++;
         frame_id++;

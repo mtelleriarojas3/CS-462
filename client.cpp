@@ -154,7 +154,6 @@ void menu(){
     }
 }//end of menu 
 
-
 void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     auto start = high_resolution_clock::now();
     int max_buffer_size;
@@ -265,6 +264,11 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
             send_done = true;
         }                   
         cout<<"\nPacket " <<packet<< " sent\n"; 
+        cout<<"Current Window: [";
+        for(int i = packet; i < ((packet + window_len)-1); i++) {
+            cout << i << ", ";
+        } 
+        cout << (packet + window_len) << "]\n";
         packet++;
         if (read_done) break;
     }
@@ -283,7 +287,6 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     cout << "Effective throughput: \n" /*<< ((double)(fileSize * 8) / duration) / 1000000*/;
     printMD5(fileName);
 }//end of run_SR
-
 
 void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int frame_id = 0;
@@ -324,7 +327,7 @@ void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout)
             if( f_recv_size > 0 && frame_recv.sq_no == 0 && frame_recv.ack == frame_id+1){
                 printf("Ack %d received\n", frame_id);
 		            ack_recv = 1;
-                cout << "Current window = [1]\n";
+                cout << "Current window = [1]\n\n";
             }else{
 		            cout << "Packet " << packetNum << " *****Timed Out*****";
                 cout << "Packet " << packetNum << " Re-transmitted.";
@@ -344,6 +347,7 @@ void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     packetNum--; 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stop - start);
+    
     // End of transmission stuff
     cout << "Number of original packets sent: " << packetNum << "\n";
     cout << "Number of retransmitted packets: " << reTranPackets << "\n";  
@@ -352,12 +356,6 @@ void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     cout << "Effective throughput: \n" /*<< ((double)(fileSize * 8) / duration) / 1000000*/;
     printMD5(fileName);
 }//end of run SaW
-
-void run_GBN() {
-    cout << "We are in GBN";
-}//End of run GBN
-
-
 
 /**
  * This is our main method that runs the client
