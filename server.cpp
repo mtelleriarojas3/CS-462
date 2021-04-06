@@ -19,7 +19,7 @@ typedef struct frame{
 }Frame;
 
 void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
-void run_SaW(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
+void run_GBN(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
 
 
 void send_ack() {
@@ -29,7 +29,6 @@ void send_ack() {
     int frame_size;
     int data_size;
     socklen_t clientSize;
-    
     int recv_seq_num;
     bool frame_error;
     bool eot;
@@ -40,18 +39,11 @@ void send_ack() {
                 MSG_WAITALL, (struct sockaddr *) &cliaddr, 
                 &clientSize);
         frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
-        
-        /////
-        //cout<< frame_error;
-        /////
-        
-        
         create_ack(recv_seq_num, ack, frame_error);
         sendto(sockfd, ack, ACK_SIZE, 0, 
                 (const struct sockaddr *) &cliaddr, clientSize);
     }
 }
-
 
 void setupServerSocket(){
     int port = 9001;
@@ -116,17 +108,17 @@ void serverFunction(){
     
     if(protocolChoice == 1){
         //Call Go Back N Protocol
+        run_GBN(packetSize, window_len, max_buffer_size, outputFile);
     }else if(protocolChoice == 2){
         //Call Selective Repeat Protocol
         run_SR(packetSize,window_len, max_buffer_size, outputFile);
     }else if(protocolChoice == 3) {
         //Call Stop and Wait Protocol
-        run_SaW(packetSize, window_len, max_buffer_size, outputFile);
+        //run_SAW(packetSize, window_len, max_buffer_size, outputFile);
     }else{
       //print error message
     }
    
-
     printMD5(outputFile);
 }//end of serverfunction
 
@@ -148,6 +140,7 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
     bool frame_error;
 
     //Receive frames until end of transmission
+    int reTranPackets = 0;
     int packet = 0;
     int ackCount = 0;
     bool recv_done = false;
@@ -172,20 +165,20 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
                     &clientSize);
             frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
             if(frame_size > 0){ 
-            packet++;
-            cout<<"\nPacket " << packet << " received!\n";
-                
+                packet++;
+                cout<<"\nPacket " << packet << " received\n";
                 if(frame_error == 0){
-                  cout<<"CheckSum OK\n";
+                    cout<<"CheckSum OK\n";
                 }else{
-                  cout<<"Checksum failed\n";
+                    cout<<"Checksum failed\n";
+                    reTranPackets++;
                 }
-            
             }
             create_ack(recv_seq_num, ack, frame_error);
             sendto(sockfd, ack, ACK_SIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
             ackCount++;
-            cout<<"Ack " <<ackCount<< " sent!\n";
+            cout<<"Ack " <<ackCount<< " sent\n";
+            cout << "HERE WE ARE FOR THE ARRAY\n";
             if (recv_seq_num <= laf) {
                 if (!frame_error) {
                     int buffer_shift = recv_seq_num * MAX_DATA_SIZE;
@@ -228,7 +221,7 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
     //Close file when done
     fclose(file);
 
-    //Start thread to keep sending requested ack to sender for 3 seconds 
+    /*//Start thread to keep sending requested ack to sender for 3 seconds 
     thread stdby_thread(send_ack);
     time_stamp start_time = current_time();
     while (elapsed_time(current_time(), start_time) < STDBY_TIME) {
@@ -240,12 +233,14 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
         sleep_for(100);
         cout << "\r" << "[STANDBY TO SEND ACK FOR 3 SECONDS \\ ]" << flush;
         sleep_for(100);
-    }
-    stdby_thread.detach();
-    cout<<"\n";
+    }*/
+    //stdby_thread.detach();
+    cout << "\nLast packet seq# received: Packet #" << packet << "\n";
+    cout << "Number of original packets received: " << packet << "\n";
+    cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
 }
 
-void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
+void run_GBN(int packetSize, int window_len, int max_buffer_size, char *test) {
     //Variables
     char recvBuff[packetSize];
     int len = strlen(recvBuff);
@@ -294,6 +289,7 @@ void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
             reTranPackets++;
             run = 0;
         }
+        cout << "Current window = [1]\n";
         ackNum++;
         packetNum++;
         frame_id++;
@@ -301,7 +297,7 @@ void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
     }
     packetNum-=2;
     reTranPackets--;
-    cout << "Last packet seq# received: " << packetNum << "\n";
+    cout << "\nLast packet seq# received: " << packetNum << "\n";
     cout << "Number of original packets received: " << packetNum << "\n";
     cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
 }

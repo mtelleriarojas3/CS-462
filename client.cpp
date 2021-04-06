@@ -26,8 +26,7 @@ typedef struct frame{
 }Frame;
 
 void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout);
-void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout);
-void run_GBN();
+void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout);
 
 void listen_ack() {
     //Variables
@@ -99,7 +98,7 @@ void menu(){
     int timeout; //Timeout
 
     // Gets our protocol choice
-    cout << "Type of protocol:\n1)GBN\n2)SR\n3)SaW\n-> ";
+    cout << "Type of protocol:\n1)GBN\n2)SR\n-> ";
     cin >> protocolChoice; 
 
     cout << "\nPacket size: ";
@@ -122,6 +121,11 @@ void menu(){
     cout<<"\nEnter Sliding Window Size: ";
     cin >> slidingWindowSize;
     
+    if(slidingWindowSize > 1 && protocolChoice == 1) {
+        cout << "Since the sliding window size is greater than 1 and you selected GBN, the protocol is automatically changed to SaW!\n";
+        protocolChoice = 3;
+    }
+    
     // Gets our Situation error choice
     cout << "\nDo you want to create errors?\n1)Yes\n2)No\n-> ";
     cin >> errorsChoice;
@@ -142,18 +146,19 @@ void menu(){
     sendto(sockfd, &slidingWindowSize, sizeof(slidingWindowSize), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
     
     if (protocolChoice == 1){
-        //Run GBN
+        run_GBN(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 2){
         run_SR(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 3){
-        //RUN SaW
-        run_SaW(packetSize, slidingWindowSize, fileName, timeout);
+        //run_SaW(packetSize, slidingWindowSize, fileName, timeout);
     }
 }//end of menu 
 
 
 void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
+    auto start = high_resolution_clock::now();
     int max_buffer_size;
+    int packet = 0;
     window_len = slidingWindowSize;
     max_buffer_size = packetSize;//MAX_DATA_SIZE * packetSize
 
@@ -174,11 +179,10 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int frame_size;
     int data_size;
 
-   //SEND FILE
+    //SEND FILE
     bool read_done = false;
-    int packet = 0;
+    int reTranPackets = 0;
     while (!read_done) {
-
         //READ PART OF FILE TO BUFFER
         buffer_size = fread(buffer, 1, max_buffer_size, file);
         if (buffer_size == max_buffer_size) {
@@ -189,7 +193,6 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         } else if (buffer_size < max_buffer_size) {
             read_done = true;
         }
-        
         window_info_mutex.lock();
 
         //INITIALIZE THE VARIABLES FOR SLIDING WINDOW
@@ -211,10 +214,8 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         bool send_done = false;
         
         while (!send_done) {
-
-            
             window_info_mutex.lock();
-            
+
             //Check window ack mask, shift window if possible
             if (window_ack_mask[0]) {
                 int shift = 1;
@@ -233,75 +234,58 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                 }
                 lar += shift;
                 lfs = lar + window_len;
-               
-                
             }
-            
-            
-            
             window_info_mutex.unlock();
 
             //Send frames that have not been sent or have timed out
             for (int i = 0; i < window_len; i ++) {
                 seq_num = lar + i + 1;
-                
-                
-                
                 if (seq_num < seq_count) {
-               
                     window_info_mutex.lock();
-                  
                     if (!window_sent_mask[i] || (!window_ack_mask[i] && (elapsed_time(current_time(), window_sent_time[i]) > timeout))) {
-                    ////
-                    
                         int buffer_shift = seq_num * MAX_DATA_SIZE;
                         data_size = (buffer_size - buffer_shift < MAX_DATA_SIZE) ? (buffer_size - buffer_shift) : MAX_DATA_SIZE;
                         memcpy(data, buffer + buffer_shift, data_size);
-                        
                         bool eot = (seq_num == seq_count - 1) && (read_done);
-                        
                         if(eot == true){
-                        
-                          cout<<"\nPacket "<<packet<<" *****Timed Out*****\n";
-                          cout<<"Packet "<<packet<<" Re-transmitted.\n"; 
-                        
+                            cout<<"\nPacket "<<packet<<" *****Timed Out*****\n";
+                            cout<<"Packet "<<packet<<" Re-transmitted.\n";
+                            reTranPackets++; 
                         }
-
-                        
                         frame_size = create_frame(seq_num, frame, data, data_size, eot);
-
-                        sendto(sockfd, frame, frame_size, 0, 
-                                (const struct sockaddr *) &servaddr, sizeof(servaddr));     
-                                
+                        sendto(sockfd, frame, frame_size, 0, (const struct sockaddr *) &servaddr, sizeof(servaddr));     
                         window_sent_mask[i] = true;
                         window_sent_time[i] = current_time();
                     }
                     window_info_mutex.unlock();
                 }
             }
-                
             //Move to next buffer if all frames in current buffer has been acked
             if (lar >= seq_count - 1) 
             send_done = true;
-            //cout<<"Let's see what this prints: " << "LAR -> " <<lar<<" LFS -> " <<lfs<<"\n"; 
-            //cout<<"seq count: " <<lar<<" seq_num: " <<seq_num<<"\n";
-        }
-                            
+        }                   
         cout<<"\nPacket " <<packet<< " sent\n"; 
         packet++;
         if (read_done) break;
     }
-    
     fclose(file);
     delete [] window_ack_mask;
     delete [] window_sent_time;
     recv_thread.detach();
     
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<seconds>(stop - start);
+    // End of transmission stuff
+    cout << "\nNumber of original packets sent: " << packet << "\n";
+    cout << "Number of retransmitted packets: " << reTranPackets << "\n";  
+    cout << "Total elapsed time: " << duration.count() << " seconds\n"; 
+    cout << "Total throughput (Mbps): \n" /*<< (((double)((fileSize + reTranPackets * packetSize)) * 8) / duration) / 1000000 << "\n"*/; 
+    cout << "Effective throughput: \n" /*<< ((double)(fileSize * 8) / duration) / 1000000*/;
     printMD5(fileName);
 }//end of run_SR
 
 
-void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout){
+void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int frame_id = 0;
     Frame frame_send;
     Frame frame_recv;
@@ -340,6 +324,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
             if( f_recv_size > 0 && frame_recv.sq_no == 0 && frame_recv.ack == frame_id+1){
                 printf("Ack %d received\n", frame_id);
 		            ack_recv = 1;
+                cout << "Current window = [1]\n";
             }else{
 		            cout << "Packet " << packetNum << " *****Timed Out*****";
                 cout << "Packet " << packetNum << " Re-transmitted.";
@@ -365,6 +350,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     cout << "Total elapsed time: " << duration.count() << " seconds\n"; 
     cout << "Total throughput (Mbps): \n" /*<< (((double)((fileSize + reTranPackets * packetSize)) * 8) / duration) / 1000000 << "\n"*/; 
     cout << "Effective throughput: \n" /*<< ((double)(fileSize * 8) / duration) / 1000000*/;
+    printMD5(fileName);
 }//end of run SaW
 
 void run_GBN() {
