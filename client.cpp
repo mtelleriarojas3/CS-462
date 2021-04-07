@@ -1,6 +1,6 @@
 #include "includes.h"
 #define TIMEOUT 10
-#define MAXLINE 1024
+
 using namespace std;
 using namespace std::chrono;
 
@@ -64,7 +64,7 @@ void listen_ack() {
 void callserver(){
     int n;
     char buffer[MAXLINE];
-    const char *ConnConfirm = "Client Connected...";
+    const char *ConnConfirm = "Client Connected...\n";
     memset(&servaddr, 0, sizeof(servaddr)); 
 
     /* Fill server address data structure */
@@ -294,7 +294,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     int ack_recv = 1;
     int totalFileSize;
              
-    FILE *fp = fopen("test.txt","rb");
+    FILE *fp = fopen(fileName,"rb");
     if(fp==NULL) {
         printf("File open error\n");
         exit(0);   

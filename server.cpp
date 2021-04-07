@@ -1,6 +1,5 @@
 #include "includes.h"
-#define STDBY_TIME 3000
-#define MAXLINE 1024
+
 using namespace std;
 
 int sockfd;
@@ -234,6 +233,7 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
 }
 
 void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
+
     //Variables
     char recvBuff[packetSize];
     int len = strlen(recvBuff);
@@ -244,6 +244,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
     Frame frame_checksum;
     int packetNum = 0;
     int ackNum = 0;
+    
    	//ofstream fileReceived;
     int run = 1;
     int reTranPackets = 0;

@@ -14,15 +14,13 @@
 #include <mutex>
 #include <unistd.h>
 #include <sys/time.h>
-#include <chrono>
-//
 #include <arpa/inet.h>
 
 
 #define PORT 9290
 #define IP "10.34.40.33" //phoenix1 ip address
 
-
+#define MAXLINE 1024
 #define MAX_DATA_SIZE 1024
 #define MAX_FRAME_SIZE 1034
 #define ACK_SIZE 6
