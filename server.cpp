@@ -19,7 +19,7 @@ typedef struct frame{
 }Frame;
 
 void run_SR(int slidingWindowSize, int packetSize, char *outputFile);
-void run_SaW(int PacketSize, int window_len, char *outputFile);
+void run_SaW(int PacketSize, int slidingWindowSize, char *outputFile);
 
 
 void send_ack() {
@@ -46,7 +46,7 @@ void send_ack() {
 }
 
 void setupServerSocket(){
-    int port = 9001;
+    
     char buffer[MAXLINE];
     const char *ConnConfirm = "Connected to server successfully!\n";
     memset(&servaddr, 0, sizeof(servaddr)); 
@@ -59,12 +59,12 @@ void setupServerSocket(){
 
     /* Create socket file descriptor */ 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        cerr << "socket creation failed" << endl;
+        cout<< "socket creation failed...";
     }
 
     /* Bind socket to server address */
-    if (::bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) { 
-        cerr << "socket binding failed" << endl;
+    if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) { 
+        cout<<"binding failed...";
     }
 
     int n;  
@@ -101,19 +101,19 @@ void serverFunction(){
     recvfrom(sockfd, &slidingWindowSize, sizeof(slidingWindowSize), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
 
     //Variables
-    int window_len = slidingWindowSize;
+    
     char outputFile[] = "received.txt";
     
     
     if(protocolChoice == 1){
         //Call Go Back N Protocol
-        run_SaW(packetSize, window_len, outputFile);
+        run_SaW(packetSize, slidingWindowSize, outputFile);
     }else if(protocolChoice == 2){
         //Call Selective Repeat Protocol
         run_SR(slidingWindowSize, packetSize, outputFile);
     }else if(protocolChoice == 3) {
         //Call Stop and Wait Protocol
-        //run_GBN(packetSize, window_len, max_buffer_size, outputFile);
+        //run_GBN();
     }else{
       //print error message
     }
@@ -124,6 +124,11 @@ void serverFunction(){
 void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
     //Open our file to put receive buffers in
     FILE *file = fopen(outputFile, "wb");
+        if(NULL == file) {
+        cout<< "Error opening file";
+        exit(1);
+    }
+    
     char buffer[packetSize];
     int buffer_size;
 
@@ -224,26 +229,12 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
     //Close file when done
     fclose(file);
 
-    /*//Start thread to keep sending requested ack to sender for 3 seconds 
-    thread stdby_thread(send_ack);
-    time_stamp start_time = current_time();
-    while (elapsed_time(current_time(), start_time) < STDBY_TIME) {
-        cout << "\r" << "[STANDBY TO SEND ACK FOR 3 SECONDS | ]" << flush;
-        sleep_for(100);
-        cout << "\r" << "[STANDBY TO SEND ACK FOR 3 SECONDS / ]" << flush;
-        sleep_for(100);
-        cout << "\r" << "[STANDBY TO SEND ACK FOR 3 SECONDS - ]" << flush;
-        sleep_for(100);
-        cout << "\r" << "[STANDBY TO SEND ACK FOR 3 SECONDS \\ ]" << flush;
-        sleep_for(100);
-    }*/
-    //stdby_thread.detach();
     cout << "\nLast packet seq# received: Packet #" << packet << "\n";
     cout << "Number of original packets received: " << packet << "\n";
     cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
 }
 
-void run_SaW(int packetSize, int window_len, char *test) {
+void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
     //Variables
     char recvBuff[packetSize];
     int len = strlen(recvBuff);
@@ -258,10 +249,9 @@ void run_SaW(int packetSize, int window_len, char *test) {
     int run = 1;
     int reTranPackets = 0;
         
-    FILE *fp;
-    fp = fopen("received.txt", "ab");
-    if(NULL == fp) {
-        printf("Error opening file");
+    FILE *file = fopen(outputFile, "wb");
+    if(NULL == file) {
+        cout<<"Error opening file";
         exit(1);
     }
     //Loop indefinitely
@@ -271,24 +261,26 @@ void run_SaW(int packetSize, int window_len, char *test) {
 		        printf("Packet %d received\n", packetNum);
             std::string test;
             test += frame_recv.packet.data;                  
-            fwrite(test.c_str(), 1, test.size(), fp); 
+            fwrite(test.c_str(), 1, test.size(), file); 
             int f_checksum_size = recvfrom(sockfd, &frame_checksum, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
             if(f_checksum_size > 0 && frame_checksum.frame_kind == 1 && frame_checksum.sq_no == frame_id) {
-                char test1 = checksum(frame_checksum.packet.data, f_checksum_size);
-                char test2 = checksum(frame_recv.packet.data, f_recv_size);
-                if(test1 == test2) {
+//                char test1 = checksum(frame_checksum.packet.data, f_checksum_size);
+//                char test2 = checksum(frame_recv.packet.data, f_recv_size);
+//                if(test1 == test2) {
                     cout << "Checksum OK \n";
-                } else {
-                    cout << "Checksum failed \n";
-                }
+//                } else {
+//                   cout << "Checksum failed \n";
+//                }
+
             }
- 			      frame_send.sq_no = 0;
+			      frame_send.sq_no = 0;
  			      frame_send.frame_kind = 0;
  			      frame_send.ack = frame_recv.sq_no + 1;
             sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr));
  			      printf("Ack %d sent\n", ackNum);
         } else {
-            printf("Packet Not Received\n");
+            cout<<"Packet Not Received\n";
+            cout<<"Checksum failed \n";
             reTranPackets++;
             run = 0;
         }
@@ -298,19 +290,27 @@ void run_SaW(int packetSize, int window_len, char *test) {
         frame_id++;
         bzero(frame_recv.packet.data, packetSize);
     }
-    packetNum-=2;
+    
+    packetNum -= 2;
     reTranPackets--;
     cout << "\nLast packet seq# received: " << packetNum << "\n";
     cout << "Number of original packets received: " << packetNum << "\n";
     cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
+
+  fclose(file);
+
 }
 
 int main() {
+
     //INTRO MESSAGE	
     cout<<"\nRUNNING SERVER ("<<IP<<")\n\n";
+    
     //SET UP SERVER SOCKET
     setupServerSocket();
+    
     //call server function
     serverFunction();
+    
     return 0;
 }

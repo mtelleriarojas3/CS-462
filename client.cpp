@@ -73,7 +73,7 @@ void callserver(){
 
     /* Create socket file descriptor */ 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        cerr << "socket creation failed" << endl;
+        cout<<"socket creation failed...";
         
     }
 
@@ -165,7 +165,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     //OPEN FILE TO SEND
     FILE *file = fopen(fileName, "rb");//fname
     char buffer[packetSize];
-    int buffer_size;
+    int bufferSize;
 
    //THE THREAD WILL START LISTENING FOR ACK
     thread recv_thread(listen_ack);
@@ -180,19 +180,19 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int reTranPackets = 0;
     while (!read_done) {
         //READ PART OF FILE TO BUFFER
-        buffer_size = fread(buffer, 1, packetSize, file);
-        if (buffer_size == packetSize) {
+        bufferSize = fread(buffer, 1, packetSize, file);
+        if (bufferSize == packetSize) {
             char temp[1];
-            int next_buffer_size = fread(temp, 1, 1, file);
-            if (next_buffer_size == 0) read_done = true;
+            int bufferSize = fread(temp, 1, 1, file);
+            if (bufferSize == 0) read_done = true;
             int error = fseek(file, -1, SEEK_CUR);
-        } else if (buffer_size < packetSize) {
+        } else if (bufferSize < packetSize) {
             read_done = true;
         }
         window_info_mutex.lock();
 
         //INITIALIZE THE VARIABLES FOR SLIDING WINDOW
-        int seq_count = buffer_size / MAX_DATA_SIZE + ((buffer_size % MAX_DATA_SIZE == 0) ? 0 : 1);
+        int seq_count = bufferSize / MAX_DATA_SIZE + ((bufferSize % MAX_DATA_SIZE == 0) ? 0 : 1);
         int seq_num;
         window_sent_time = new time_stamp[slidingWindowSize];
         window_ack_mask = new bool[slidingWindowSize];
@@ -240,7 +240,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                     window_info_mutex.lock();
                     if (!window_sent_mask[i] || (!window_ack_mask[i] && (elapsed_time(current_time(), window_sent_time[i]) > timeout))) {
                         int buffer_shift = seq_num * MAX_DATA_SIZE;
-                        data_size = (buffer_size - buffer_shift < MAX_DATA_SIZE) ? (buffer_size - buffer_shift) : MAX_DATA_SIZE;
+                        data_size = (bufferSize - buffer_shift < MAX_DATA_SIZE) ? (bufferSize - buffer_shift) : MAX_DATA_SIZE;
                         memcpy(data, buffer + buffer_shift, data_size);
                         bool eot = (seq_num == seq_count - 1) && (read_done);
                         if(eot == true){
