@@ -19,7 +19,7 @@ typedef struct frame{
 }Frame;
 
 void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
-void run_GBN(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
+void run_SaW(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
 
 
 void send_ack() {
@@ -108,7 +108,7 @@ void serverFunction(){
     
     if(protocolChoice == 1){
         //Call Go Back N Protocol
-        run_GBN(packetSize, window_len, max_buffer_size, outputFile);
+        run_SaW(packetSize, window_len, max_buffer_size, outputFile);
     }else if(protocolChoice == 2){
         //Call Selective Repeat Protocol
         run_SR(packetSize,window_len, max_buffer_size, outputFile);
@@ -244,7 +244,7 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
     cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
 }
 
-void run_GBN(int packetSize, int window_len, int max_buffer_size, char *test) {
+void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
     //Variables
     char recvBuff[packetSize];
     int len = strlen(recvBuff);

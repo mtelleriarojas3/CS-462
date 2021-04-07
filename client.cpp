@@ -26,7 +26,7 @@ typedef struct frame{
 }Frame;
 
 void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout);
-void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout);
+void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout);
 
 void listen_ack() {
     //Variables
@@ -98,7 +98,7 @@ void menu(){
     int timeout; //Timeout
 
     // Gets our protocol choice
-    cout << "Type of protocol:\n1)GBN\n2)SR\n-> ";
+    cout << "Type of protocol:\n1)SaW\n2)SR\n-> ";
     cin >> protocolChoice; 
 
     cout << "\nPacket size: ";
@@ -117,13 +117,13 @@ void menu(){
         timeout = TIMEOUT;
     }
     
-    // Gets our SWS
-    cout<<"\nEnter Sliding Window Size: ";
-    cin >> slidingWindowSize;
     
-    if(slidingWindowSize > 1 && protocolChoice == 1) {
-        cout << "Since the sliding window size is greater than 1 and you selected GBN, the protocol is automatically changed to SaW!\n";
-        protocolChoice = 3;
+    if(protocolChoice != 1){
+        // Gets our SWS
+        cout<<"\nEnter Sliding Window Size: ";
+        cin >> slidingWindowSize;
+    }else{
+        slidingWindowSize =1;
     }
     
     // Gets our Situation error choice
@@ -146,7 +146,7 @@ void menu(){
     sendto(sockfd, &slidingWindowSize, sizeof(slidingWindowSize), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
     
     if (protocolChoice == 1){
-        run_GBN(packetSize, slidingWindowSize, fileName, timeout);
+        run_SaW(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 2){
         run_SR(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 3){
@@ -288,7 +288,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     printMD5(fileName);
 }//end of run_SR
 
-void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout){
+void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int frame_id = 0;
     Frame frame_send;
     Frame frame_recv;
