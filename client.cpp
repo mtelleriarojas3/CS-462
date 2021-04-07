@@ -123,7 +123,7 @@ void menu(){
         cout<<"\nEnter Sliding Window Size: ";
         cin >> slidingWindowSize;
     }else{
-        slidingWindowSize =1;
+        slidingWindowSize = 1;
     }
     
     // Gets our Situation error choice
@@ -295,7 +295,6 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     int ack_recv = 1;
     int totalFileSize;
              
-    //totalFileSize = get_file_Size(fileName);
     FILE *fp = fopen("test.txt","rb");
     if(fp==NULL) {
         printf("File open error\n");
@@ -327,7 +326,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
             if( f_recv_size > 0 && frame_recv.sq_no == 0 && frame_recv.ack == frame_id+1){
                 printf("Ack %d received\n", frame_id);
 		            ack_recv = 1;
-                cout << "Current window = [1]\n\n";
+                cout << "Current window = [" << frame_send.sq_no<<"]\n\n";
             }else{
 		            cout << "Packet " << packetNum << " *****Timed Out*****";
                 cout << "Packet " << packetNum << " Re-transmitted.";

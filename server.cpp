@@ -293,7 +293,7 @@ void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
             reTranPackets++;
             run = 0;
         }
-        cout << "Current window = [1]\n\n";
+        cout << "Current window = ["<<frame_recv.sq_no<<"]\n\n";
         ackNum++;
         packetNum++;
         frame_id++;
