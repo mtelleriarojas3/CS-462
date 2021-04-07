@@ -150,16 +150,13 @@ void menu(){
     }else if(protocolChoice == 2){
         run_SR(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 3){
-        //run_SaW(packetSize, slidingWindowSize, fileName, timeout);
+        //run_GBN(packetSize, slidingWindowSize, fileName, timeout);
     }
 }//end of menu 
 
 void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     auto start = high_resolution_clock::now();
-    int max_buffer_size;
     int packet = 0;
-    window_len = slidingWindowSize;
-    max_buffer_size = packetSize;//MAX_DATA_SIZE * packetSize
 
     if (access(fileName, F_OK) == -1) {
         cerr << "file doesn't exist: " << fileName << endl;
@@ -167,7 +164,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
 
     //OPEN FILE TO SEND
     FILE *file = fopen(fileName, "rb");//fname
-    char buffer[max_buffer_size];
+    char buffer[packetSize];
     int buffer_size;
 
    //THE THREAD WILL START LISTENING FOR ACK
@@ -183,13 +180,13 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
     int reTranPackets = 0;
     while (!read_done) {
         //READ PART OF FILE TO BUFFER
-        buffer_size = fread(buffer, 1, max_buffer_size, file);
-        if (buffer_size == max_buffer_size) {
+        buffer_size = fread(buffer, 1, packetSize, file);
+        if (buffer_size == packetSize) {
             char temp[1];
             int next_buffer_size = fread(temp, 1, 1, file);
             if (next_buffer_size == 0) read_done = true;
             int error = fseek(file, -1, SEEK_CUR);
-        } else if (buffer_size < max_buffer_size) {
+        } else if (buffer_size < packetSize) {
             read_done = true;
         }
         window_info_mutex.lock();
@@ -197,15 +194,15 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         //INITIALIZE THE VARIABLES FOR SLIDING WINDOW
         int seq_count = buffer_size / MAX_DATA_SIZE + ((buffer_size % MAX_DATA_SIZE == 0) ? 0 : 1);
         int seq_num;
-        window_sent_time = new time_stamp[window_len];
-        window_ack_mask = new bool[window_len];
-        bool window_sent_mask[window_len];
-        for (int i = 0; i < window_len; i++) {
+        window_sent_time = new time_stamp[slidingWindowSize];
+        window_ack_mask = new bool[slidingWindowSize];
+        bool window_sent_mask[slidingWindowSize];
+        for (int i = 0; i < slidingWindowSize; i++) {
             window_ack_mask[i] = false;
             window_sent_mask[i] = false;
         }
         lar = -1;
-        lfs = lar + window_len;
+        lfs = lar + slidingWindowSize;
 
         window_info_mutex.unlock();
         
@@ -218,26 +215,26 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
             //Check window ack mask, shift window if possible
             if (window_ack_mask[0]) {
                 int shift = 1;
-                for (int i = 1; i < window_len; i++) {
+                for (int i = 1; i < slidingWindowSize; i++) {
                     if (!window_ack_mask[i]) break;
                     shift += 1;
                 }
-                for (int i = 0; i < window_len - shift; i++) {
+                for (int i = 0; i < slidingWindowSize - shift; i++) {
                     window_sent_mask[i] = window_sent_mask[i + shift];
                     window_ack_mask[i] = window_ack_mask[i + shift];
                     window_sent_time[i] = window_sent_time[i + shift];
                 }
-                for (int i = window_len - shift; i < window_len; i++) {
+                for (int i = slidingWindowSize - shift; i < slidingWindowSize; i++) {
                     window_sent_mask[i] = false;
                     window_ack_mask[i] = false;
                 }
                 lar += shift;
-                lfs = lar + window_len;
+                lfs = lar + slidingWindowSize;
             }
             window_info_mutex.unlock();
 
             //Send frames that have not been sent or have timed out
-            for (int i = 0; i < window_len; i ++) {
+            for (int i = 0; i < slidingWindowSize; i ++) {
                 seq_num = lar + i + 1;
                 if (seq_num < seq_count) {
                     window_info_mutex.lock();
@@ -265,10 +262,10 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         }                   
         cout<<"\nPacket " <<packet<< " sent\n"; 
         cout<<"Current Window: [";
-        for(int i = packet; i < ((packet + window_len)-1); i++) {
+        for(int i = packet; i < ((packet + slidingWindowSize)-1); i++) {
             cout << i << ", ";
         } 
-        cout << (packet + window_len) << "]\n";
+        cout << (packet + slidingWindowSize) << "]\n";
         packet++;
         if (read_done) break;
     }

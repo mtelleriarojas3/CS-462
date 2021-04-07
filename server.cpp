@@ -18,8 +18,8 @@ typedef struct frame{
     Packet packet;
 }Frame;
 
-void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
-void run_SaW(int PacketSize, int window_len, int max_buffer_size, char *outputFile);
+void run_SR(int slidingWindowSize, int packetSize, char *outputFile);
+void run_SaW(int PacketSize, int window_len, char *outputFile);
 
 
 void send_ack() {
@@ -102,19 +102,18 @@ void serverFunction(){
 
     //Variables
     int window_len = slidingWindowSize;
-    int max_buffer_size = packetSize;
     char outputFile[] = "received.txt";
     
     
     if(protocolChoice == 1){
         //Call Go Back N Protocol
-        run_SaW(packetSize, window_len, max_buffer_size, outputFile);
+        run_SaW(packetSize, window_len, outputFile);
     }else if(protocolChoice == 2){
         //Call Selective Repeat Protocol
-        run_SR(packetSize,window_len, max_buffer_size, outputFile);
+        run_SR(slidingWindowSize, packetSize, outputFile);
     }else if(protocolChoice == 3) {
         //Call Stop and Wait Protocol
-        //run_SAW(packetSize, window_len, max_buffer_size, outputFile);
+        //run_GBN(packetSize, window_len, max_buffer_size, outputFile);
     }else{
       //print error message
     }
@@ -122,10 +121,10 @@ void serverFunction(){
     printMD5(outputFile);
 }//end of serverfunction
 
-void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFile){
+void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
     //Open our file to put receive buffers in
     FILE *file = fopen(outputFile, "wb");
-    char buffer[max_buffer_size];
+    char buffer[packetSize];
     int buffer_size;
 
     //Initialize sliding window variables 
@@ -146,16 +145,16 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
     bool recv_done = false;
     int buffer_num = 0;
     while (!recv_done) {
-        buffer_size = max_buffer_size;
+        buffer_size = packetSize;
         memset(buffer, 0, buffer_size);
     
-        int recv_seq_count = (int) max_buffer_size / MAX_DATA_SIZE;
-        bool window_recv_mask[window_len];
-        for (int i = 0; i < window_len; i++) {
+        int recv_seq_count = (int) packetSize / MAX_DATA_SIZE;
+        bool window_recv_mask[slidingWindowSize];
+        for (int i = 0; i < slidingWindowSize; i++) {
             window_recv_mask[i] = false;
         }
         lfr = -1;
-        laf = lfr + window_len;
+        laf = lfr + slidingWindowSize;
         
         /* Receive current buffer with sliding window */
         while (true) {
@@ -168,10 +167,10 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
                 packet++;
                 cout<<"\nPacket " << packet << " received\n";
                 cout<<"Current Window: [";
-                for(int i = packet; i < ((packet + window_len)-1); i++) {
+                for(int i = packet; i < ((packet + slidingWindowSize)-1); i++) {
                     cout << i << ", ";
                 } 
-                cout << (packet + window_len) << "]\n";
+                cout << (packet + slidingWindowSize) << "]\n";
                 if(frame_error == 0){
                     cout<<"CheckSum OK\n";
                 }else{
@@ -189,18 +188,18 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
                     if (recv_seq_num == lfr + 1) {
                         memcpy(buffer + buffer_shift, data, data_size);
                         int shift = 1;
-                        for (int i = 1; i < window_len; i++) {
+                        for (int i = 1; i < slidingWindowSize; i++) {
                             if (!window_recv_mask[i]) break;
                             shift += 1;
                         }
-                        for (int i = 0; i < window_len - shift; i++) {
+                        for (int i = 0; i < slidingWindowSize - shift; i++) {
                             window_recv_mask[i] = window_recv_mask[i + shift];
                         }
-                        for (int i = window_len - shift; i < window_len; i++) {
+                        for (int i = slidingWindowSize - shift; i < slidingWindowSize; i++) {
                             window_recv_mask[i] = false;
                         }
                         lfr += shift;
-                        laf = lfr + window_len;
+                        laf = lfr + slidingWindowSize;
                     } else if (recv_seq_num > lfr + 1) {
                         if (!window_recv_mask[recv_seq_num - (lfr + 1)]) {
                             memcpy(buffer + buffer_shift, data, data_size);
@@ -244,7 +243,7 @@ void run_SR(int PacketSize, int window_len, int max_buffer_size, char *outputFil
     cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
 }
 
-void run_SaW(int packetSize, int window_len, int max_buffer_size, char *test) {
+void run_SaW(int packetSize, int window_len, char *test) {
     //Variables
     char recvBuff[packetSize];
     int len = strlen(recvBuff);
