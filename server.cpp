@@ -20,7 +20,7 @@ typedef struct frame{
 
 void run_SR(int slidingWindowSize, int packetSize, char *outputFile);
 void run_SaW(int PacketSize, int slidingWindowSize, char *outputFile);
-
+void run_GBN(int packetSize, int slidingWindowSize, char *outputFile);
 
 void send_ack() {
     char frame[MAX_FRAME_SIZE];
@@ -100,8 +100,7 @@ void serverFunction(){
     //RECEIVE SLIDING WINDOW SIZE
     recvfrom(sockfd, &slidingWindowSize, sizeof(slidingWindowSize), MSG_WAITALL, (struct sockaddr *) &servaddr,(socklen_t*)&len);
 
-    //Variables
-    
+    //OUTPUTFILE
     char outputFile[] = "received.txt";
     
     
@@ -113,7 +112,7 @@ void serverFunction(){
         run_SR(slidingWindowSize, packetSize, outputFile);
     }else if(protocolChoice == 3) {
         //Call Stop and Wait Protocol
-        //run_GBN();
+        run_GBN(packetSize, slidingWindowSize, outputFile);
     }else{
       //print error message
     }
@@ -264,20 +263,14 @@ void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
             fwrite(test.c_str(), 1, test.size(), file); 
             int f_checksum_size = recvfrom(sockfd, &frame_checksum, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
             if(f_checksum_size > 0 && frame_checksum.frame_kind == 1 && frame_checksum.sq_no == frame_id) {
-//                char test1 = checksum(frame_checksum.packet.data, f_checksum_size);
-//                char test2 = checksum(frame_recv.packet.data, f_recv_size);
-//                if(test1 == test2) {
-                    cout << "Checksum OK \n";
-//                } else {
-//                   cout << "Checksum failed \n";
-//                }
-
+              cout << "Checksum OK \n";
             }
 			      frame_send.sq_no = 0;
  			      frame_send.frame_kind = 0;
  			      frame_send.ack = frame_recv.sq_no + 1;
             sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr));
  			      printf("Ack %d sent\n", ackNum);
+                              
         } else {
             cout<<"Packet Not Received\n";
             cout<<"Checksum failed \n";
@@ -289,6 +282,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
         packetNum++;
         frame_id++;
         bzero(frame_recv.packet.data, packetSize);
+        
     }
     
     packetNum -= 2;
@@ -300,6 +294,13 @@ void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
   fclose(file);
 
 }
+
+
+void run_GBN(int packetSize, int slidingWindowSize, char *outputFile){
+
+
+}//end of GBN
+
 
 int main() {
 
