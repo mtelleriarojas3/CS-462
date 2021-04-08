@@ -1,6 +1,6 @@
 #include "includes.h"
 #define TIMEOUT 10
-#define MAXLINE 1024
+
 using namespace std;
 using namespace std::chrono;
 
@@ -27,6 +27,8 @@ typedef struct frame{
 
 void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout);
 void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout);
+void run_GBN(int packetSize, int slidingWindowSize, char *outputFile);
+
 
 void listen_ack() {
     //Variables
@@ -62,7 +64,7 @@ void listen_ack() {
 void callserver(){
     int n;
     char buffer[MAXLINE];
-    const char *ConnConfirm = "Client Connected...";
+    const char *ConnConfirm = "Client Connected...\n";
     memset(&servaddr, 0, sizeof(servaddr)); 
 
     /* Fill server address data structure */
@@ -150,7 +152,7 @@ void menu(){
     }else if(protocolChoice == 2){
         run_SR(packetSize, slidingWindowSize, fileName, timeout);
     }else if(protocolChoice == 3){
-        //run_GBN(packetSize, slidingWindowSize, fileName, timeout);
+        run_GBN(packetSize, slidingWindowSize, fileName);
     }
 }//end of menu 
 
@@ -245,7 +247,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                         bool eot = (seq_num == seq_count - 1) && (read_done);
                         if(eot == true){
                             cout<<"\nPacket "<<packet<<" *****Timed Out*****\n";
-                            cout<<"Packet "<<packet<<" Re-transmitted.\n";
+                            cout<<"\nPacket "<<packet<<" Re-transmitted.\n";
                             reTranPackets++; 
                         }
                         frame_size = create_frame(seq_num, frame, data, data_size, eot);
@@ -292,7 +294,7 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     int ack_recv = 1;
     int totalFileSize;
              
-    FILE *fp = fopen("test.txt","rb");
+    FILE *fp = fopen(fileName,"rb");
     if(fp==NULL) {
         printf("File open error\n");
         exit(0);   
@@ -352,6 +354,17 @@ void run_SaW(int packetSize, int slidingWindowSize, char *fileName, int timeout)
     cout << "Effective throughput: \n" /*<< ((double)(fileSize * 8) / duration) / 1000000*/;
     printMD5(fileName);
 }//end of run SaW
+
+
+void run_GBN(int packetSize, int slidingWindowSize, char *outputFile){
+
+
+}//end of GBN
+
+
+
+
+
 
 /**
  * This is our main method that runs the client
