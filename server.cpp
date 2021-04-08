@@ -20,6 +20,7 @@ typedef struct frame{
 
 void run_SR(int slidingWindowSize, int packetSize, char *outputFile);
 void run_SaW(int PacketSize, int slidingWindowSize, char *outputFile);
+void run_GBN(int PacketSize, int slidingWindowSize, char *outputFile);
 
 
 void send_ack() {
@@ -46,7 +47,6 @@ void send_ack() {
 }
 
 void setupServerSocket(){
-    
     char buffer[MAXLINE];
     const char *ConnConfirm = "Connected to server successfully!\n";
     memset(&servaddr, 0, sizeof(servaddr)); 
@@ -152,7 +152,6 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
     while (!recv_done) {
         buffer_size = packetSize;
         memset(buffer, 0, buffer_size);
-    
         int recv_seq_count = (int) packetSize / MAX_DATA_SIZE;
         bool window_recv_mask[slidingWindowSize];
         for (int i = 0; i < slidingWindowSize; i++) {
@@ -298,7 +297,43 @@ void run_SaW(int packetSize, int slidingWindowSize, char *outputFile) {
     cout << "Number of retransmitted packets received: " << reTranPackets << "\n";
 
   fclose(file);
+}
 
+void run_GBN(int PacketSize, int slidingWindowSize, char *outputFile) {
+    Frame frame_recv;
+    Frame frame_send;
+    int sequenceNum = 0;
+    int run = 1;
+    int ackNum = 0;
+    int frame_id = 0;
+    int reTranPackets = 0;
+    
+    FILE *file = fopen(outputFile, "wb");
+    if(NULL == file) {
+        cout<<"Error opening file";
+        exit(1);
+    }
+    
+    while(run) {
+        int f_recv_size = recvfrom(sockfd, &frame_recv, sizeof(Frame), 0, (struct sockaddr*)&cliaddr,(socklen_t*)&len);
+        if (f_recv_size > 0 && frame_recv.frame_kind == 1 && frame_recv.sq_no == frame_id) {
+            if(frame_recv.sq_no <= 0) {
+                //Do nothing?
+            } else if(frame_recv.sq_no == sequenceNum) {
+                std::string test;
+                test += frame_recv.packet.data;
+                fwrite(test.c_str(), 1, test.size(), file); //Write to our file
+                sequenceNum = sequenceNum + 1;
+                sendto(sockfd, &frame_send, sizeof(frame_send), 0, (struct sockaddr*)&cliaddr, sizeof(servaddr)); //Send ack
+ 			          printf("Ack %d sent\n", ackNum);
+            }
+        } else {
+            cout<<"Packet Not Received\n";
+            cout<<"Checksum failed \n";
+            reTranPackets++;
+            run = 0;
+        }
+    }
 }
 
 int main() {
