@@ -15,17 +15,15 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <chrono>
-//
 #include <arpa/inet.h>
 
 
-#define PORT 9290
+#define PORT 9295
 #define IP "10.34.40.33" //phoenix1 ip address
 
-
-#define MAX_DATA_SIZE 1024
-#define MAX_FRAME_SIZE 1034
-#define ACK_SIZE 6
+#define ACKSIZE 6
+#define MAXLINE 1024
+#define MAXFRAME 1034
 
 #define current_time chrono::high_resolution_clock::now
 #define time_stamp chrono::high_resolution_clock::time_point

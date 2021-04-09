@@ -7,7 +7,7 @@
 
 #include "includes.h"
 #define TIMEOUT 10
-#define MAXLINE 1024
+
 using namespace std;
 using namespace std::chrono;
 
@@ -46,7 +46,7 @@ void run_GBN(int packetSize, int slidingWindowSize, char *fileName, int timeout)
 void listen_ack() {
     //Variables
     int ackCount = 0;
-    char ack[ACK_SIZE];
+    char ack[ACKSIZE];
     int ack_size;
     int ack_seq_num;
     bool ack_error;
@@ -55,7 +55,7 @@ void listen_ack() {
     //Listen for ack from reciever
     while (true) {
         socklen_t server_addr_size;
-        ack_size = recvfrom(sockfd, (char *)ack, ACK_SIZE, 
+        ack_size = recvfrom(sockfd, (char *)ack, ACKSIZE, 
                 MSG_WAITALL, (struct sockaddr *) &servaddr, 
                 &server_addr_size);
         ack_error = read_ack(&ack_seq_num, &ack_neg, ack);
@@ -165,11 +165,17 @@ void menu(){
     
     //Sends us to the respective protocol to be done
     if (protocolChoice == 1){
+    
         run_SaW(packetSize, slidingWindowSize, fileName, timeout);
+        
     }else if(protocolChoice == 2){
+    
         run_SR(packetSize, slidingWindowSize, fileName, timeout);
+        
     }else if(protocolChoice == 3){
+    
         run_GBN(packetSize, slidingWindowSize, fileName, timeout);
+        
     }
 }//end of menu 
 
@@ -193,14 +199,15 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
    //THE THREAD WILL START LISTENING FOR ACK
     thread recv_thread(listen_ack);
 
-    char frame[MAX_FRAME_SIZE];
-    char data[MAX_DATA_SIZE];
+    char frame[MAXFRAME];
+    char data[MAXLINE];
     int frame_size;
     int data_size;
 
     //SEND FILE
     bool read_done = false;
     int reTranPackets = 0;
+    
     while (!read_done) {
         //READ PART OF FILE TO BUFFER
         bufferSize = fread(buffer, 1, packetSize, file);
@@ -215,7 +222,7 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         window_info_mutex.lock();
 
         //INITIALIZE THE VARIABLES FOR SLIDING WINDOW
-        int seq_count = bufferSize / MAX_DATA_SIZE + ((bufferSize % MAX_DATA_SIZE == 0) ? 0 : 1);
+        int seq_count = bufferSize / MAXLINE + ((bufferSize % MAXLINE == 0) ? 0 : 1);
         int seq_num;
         window_sent_time = new time_stamp[slidingWindowSize];
         window_ack_mask = new bool[slidingWindowSize];
@@ -228,14 +235,14 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
         lfs = lar + slidingWindowSize;
 
         window_info_mutex.unlock();
-        
-        //Send current buffer with sliding window
+        //SEND THE BUFFER WITH SLIDING WINDOW
         bool send_done = false;
         
         while (!send_done) {
             window_info_mutex.lock();
 
-            //Check window ack mask, shift window if possible
+            
+            //CHECK WINDOW ACK MASK AND SHIFT IF NECESSARY
             if (window_ack_mask[0]) {
                 int shift = 1;
                 for (int i = 1; i < slidingWindowSize; i++) {
@@ -251,19 +258,20 @@ void run_SR(int packetSize, int slidingWindowSize, char *fileName, int timeout){
                     window_sent_mask[i] = false;
                     window_ack_mask[i] = false;
                 }
-                lar += shift;
-                lfs = lar + slidingWindowSize;
+                lar += shift; //last ack received
+                lfs = lar + slidingWindowSize; //last frame sent
             }
             window_info_mutex.unlock();
 
-            //Send frames that have not been sent or have timed out
+           
+            //SEND ALL FRAMES THAT HAVE TIMED OUT OR HAVEN'T BEEN SENT
             for (int i = 0; i < slidingWindowSize; i ++) {
                 seq_num = lar + i + 1;
                 if (seq_num < seq_count) {
                     window_info_mutex.lock();
                     if (!window_sent_mask[i] || (!window_ack_mask[i] && (elapsed_time(current_time(), window_sent_time[i]) > timeout))) {
-                        int buffer_shift = seq_num * MAX_DATA_SIZE;
-                        data_size = (bufferSize - buffer_shift < MAX_DATA_SIZE) ? (bufferSize - buffer_shift) : MAX_DATA_SIZE;
+                        int buffer_shift = seq_num * MAXLINE;
+                        data_size = (bufferSize - buffer_shift < MAXLINE) ? (bufferSize - buffer_shift) : MAXLINE;
                         memcpy(data, buffer + buffer_shift, data_size);
                         bool eot = (seq_num == seq_count - 1) && (read_done);
                         if(eot == true){

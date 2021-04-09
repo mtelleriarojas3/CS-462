@@ -6,7 +6,7 @@
  */
 #include "includes.h"
 #define STDBY_TIME 3000
-#define MAXLINE 1024
+
 using namespace std;
 
 //Variables
@@ -37,9 +37,9 @@ void run_GBN(int PacketSize, int slidingWindowSize, char *outputFile);
  */
 void send_ack() {
     //Declare variables
-    char frame[MAX_FRAME_SIZE];
-    char data[MAX_DATA_SIZE];
-    char ack[ACK_SIZE];
+    char frame[MAXFRAME];
+    char data[MAXLINE];
+    char ack[ACKSIZE];
     int frame_size;
     int data_size;
     socklen_t clientSize;
@@ -49,10 +49,10 @@ void send_ack() {
 
     /* Listen for frames and send ack */
     while (true) {
-        frame_size = recvfrom(sockfd, (char *)frame, MAX_FRAME_SIZE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &clientSize);
+        frame_size = recvfrom(sockfd, (char *)frame, MAXFRAME, MSG_WAITALL, (struct sockaddr *) &cliaddr, &clientSize);
         frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
         create_ack(recv_seq_num, ack, frame_error);
-        sendto(sockfd, ack, ACK_SIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
+        sendto(sockfd, ack, ACKSIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
     }
 }
 
@@ -149,9 +149,9 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
     int buffer_size;
 
     //Initialize sliding window variables 
-    char frame[MAX_FRAME_SIZE];
-    char data[MAX_DATA_SIZE];
-    char ack[ACK_SIZE];
+    char frame[MAXFRAME];
+    char data[MAXLINE];
+    char ack[ACKSIZE];
     int frame_size;
     int data_size;
     int lfr, laf;
@@ -170,7 +170,7 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
     while (!recv_done) {
         buffer_size = packetSize;
         memset(buffer, 0, buffer_size);
-        int recv_seq_count = (int) packetSize / MAX_DATA_SIZE;
+        int recv_seq_count = (int) packetSize / MAXLINE;
         bool window_recv_mask[slidingWindowSize];
         for (int i = 0; i < slidingWindowSize; i++) {
             window_recv_mask[i] = false;
@@ -181,7 +181,7 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
         /* Receive current buffer with sliding window */
         while (true) {
             socklen_t clientSize;
-            frame_size = recvfrom(sockfd, (char *) frame, MAX_FRAME_SIZE, 
+            frame_size = recvfrom(sockfd, (char *) frame, MAXFRAME, 
                     MSG_WAITALL, (struct sockaddr *) &cliaddr, 
                     &clientSize);
             frame_error = read_frame(&recv_seq_num, data, &data_size, &eot, frame);
@@ -201,12 +201,12 @@ void run_SR(int slidingWindowSize, int packetSize, char *outputFile){
                 }
             }
             create_ack(recv_seq_num, ack, frame_error);
-            sendto(sockfd, ack, ACK_SIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
+            sendto(sockfd, ack, ACKSIZE, 0, (const struct sockaddr *) &cliaddr, clientSize);
             ackCount++;
             cout<<"Ack " <<ackCount<< " sent\n";
             if (recv_seq_num <= laf) {
                 if (!frame_error) {
-                    int buffer_shift = recv_seq_num * MAX_DATA_SIZE;
+                    int buffer_shift = recv_seq_num * MAXLINE;
                     if (recv_seq_num == lfr + 1) {
                         memcpy(buffer + buffer_shift, data, data_size);
                         int shift = 1;
